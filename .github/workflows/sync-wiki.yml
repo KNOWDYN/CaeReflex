@@ -139,20 +139,11 @@ jobs:
           print(f"Exported {len(files)} Markdown pages to {out}")
           PY
 
-      - name: Clone or initialize GitHub Wiki repository
+      - name: Clone GitHub Wiki repository
         env:
           WIKI_TOKEN: ${{ secrets.WIKI_SYNC_TOKEN || github.token }}
         run: |
-          set -euo pipefail
-          WIKI_REMOTE="https://x-access-token:${WIKI_TOKEN}@github.com/${{ github.repository }}.wiki.git"
-          if git clone "${WIKI_REMOTE}" .wiki; then
-            echo "Cloned existing GitHub Wiki repository."
-          else
-            echo "Wiki repository could not be cloned. Initializing a new local wiki repository."
-            echo "If the push step fails, confirm that the repository Wiki feature is enabled and that WIKI_SYNC_TOKEN has wiki write access."
-            git init --initial-branch=master .wiki
-            git -C .wiki remote add origin "${WIKI_REMOTE}"
-          fi
+          git clone "https://x-access-token:${WIKI_TOKEN}@github.com/${{ github.repository }}.wiki.git" .wiki
 
       - name: Replace wiki contents
         run: |
@@ -163,11 +154,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet --exit-code && [ -z "$(git status --porcelain)" ]; then
+          if git diff --quiet --exit-code; then
             echo "GitHub Wiki is already up to date."
             exit 0
           fi
           git add .
           git commit -m "Sync wiki from /wiki/docs"
-          branch="$(git branch --show-current)"
-          git push origin "HEAD:${branch:-master}"
+          git push
