@@ -67,6 +67,148 @@ pip install -e ".[gmsh]"     # optional Gmsh Python support
 pip install -e ".[all,dev]"  # everything plus test dependencies
 ```
 
+## Tutorial: local CAE folder to Custom GPT
+
+Use this tutorial when an engineer wants to run CaeReflex on a laptop, inspect a local folder that contains CAE artefacts, and make the resulting REST actions available to a Custom GPT. The examples assume your CAE cases live in `~/cae-workspace`; change that path to match your machine.
+
+### Step 1 — Prepare a workspace
+
+Choose one directory that CaeReflex will treat as the root for case imports. Put the CAE folders or files you want to inspect under that directory.
+
+```bash
+mkdir -p ~/cae-workspace
+# Example layout:
+# ~/cae-workspace/lid_driven_cavity/system/controlDict
+# ~/cae-workspace/bracket_mesh/model.geo
+# ~/cae-workspace/results/sample.vtk
+```
+
+When the REST server is started with `--workspace ~/cae-workspace`, paths sent by the Custom GPT should be relative to that workspace, such as `lid_driven_cavity` or `bracket_mesh/model.geo`.
+
+### Step 2 — Clone and install CaeReflex
+
+```bash
+git clone https://github.com/YOUR_ORG_OR_USER/CaeReflex.git
+cd CaeReflex
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e ".[server]"
+```
+
+Use additional extras only when needed:
+
+```bash
+pip install -e ".[mesh]"   # deeper .msh inspection
+pip install -e ".[vtk]"    # VTK/PyVista readers
+pip install -e ".[gmsh]"   # Gmsh Python support
+```
+
+### Step 3 — Smoke-test a local case from the CLI
+
+Run one CLI inspection before connecting a GPT. This confirms the installation, the workspace path, and adapter detection.
+
+```bash
+caereflex inspect ~/cae-workspace/lid_driven_cavity \
+  --out caereflex.json \
+  --agent-context agent_context.json \
+  --report case_report.md
+```
+
+If your case is a single file, pass that file instead:
+
+```bash
+caereflex inspect ~/cae-workspace/bracket_mesh/model.geo \
+  --out caereflex.json \
+  --agent-context agent_context.json
+```
+
+### Step 4 — Start the local REST/OpenAPI server
+
+```bash
+caereflex serve --host 127.0.0.1 --port 8765 --workspace ~/cae-workspace
+```
+
+Check the server locally:
+
+```bash
+curl http://127.0.0.1:8765/health
+curl http://127.0.0.1:8765/openapi.yaml
+```
+
+### Step 5 — Expose the server to Custom GPT Actions
+
+Custom GPT Actions need an HTTPS URL. Start a tunnel to the local CaeReflex server and keep the terminal running while you use the GPT.
+
+With ngrok:
+
+```bash
+ngrok http 8765
+```
+
+With Cloudflare Tunnel:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8765
+```
+
+Copy the generated HTTPS base URL. Your OpenAPI schema URL will be:
+
+```text
+https://YOUR-TUNNEL-HOST/openapi.yaml
+```
+
+### Step 6 — Create the Custom GPT Action
+
+In ChatGPT:
+
+1. Open **Explore GPTs** and select **Create**.
+2. Open **Configure**.
+3. Add an action.
+4. Import the schema from `https://YOUR-TUNNEL-HOST/openapi.yaml`.
+5. If you run CaeReflex on a non-localhost host with an API key, configure the `x-api-key` authentication header.
+6. Save the GPT.
+
+Suggested GPT instructions:
+
+```text
+You are a CaeReflex engineering-case reviewer.
+
+Use CaeReflex actions to check service health, import CAE cases from the configured workspace, retrieve agent context, inspect flags, and summarize findings for the user.
+
+When the user asks for a case review, first import the requested case path, then retrieve agent context and inspection flags. Use CrossRef actions only when the user asks for literature context.
+```
+
+### Step 7 — Test the end-to-end flow
+
+Ask the Custom GPT:
+
+```text
+Check whether CaeReflex is healthy. Then import lid_driven_cavity, summarize the agent context, and list the inspection flags.
+```
+
+For a single-file case, use the workspace-relative file path:
+
+```text
+Import bracket_mesh/model.geo, summarize the detected CAE metadata, and show the generated inspection flags.
+```
+
+### Step 8 — Optional: call the REST API manually
+
+You can test the same import without ChatGPT:
+
+```bash
+curl -X POST "http://127.0.0.1:8765/cases/import" \
+  -H "Content-Type: application/json" \
+  -d '{"path":"lid_driven_cavity","adapter":"auto","attach_crossref":false,"return_agent_context":true}'
+```
+
+Use the returned `case_id` to retrieve the compact context:
+
+```bash
+curl "http://127.0.0.1:8765/cases/CASE_ID/agent-context"
+```
+
 ## Full hands-on example: localhost CaeReflex + Custom GPT or Claude + CrossRef
 
 This example starts with a fresh clone, serves CaeReflex on localhost, exposes it securely for a browser-based agent, connects either a Custom GPT or Claude-style agent, imports a bundled OpenFOAM example, and attaches CrossRef research metadata.
