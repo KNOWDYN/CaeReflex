@@ -25,7 +25,7 @@ caereflex export agent-context caereflex.json --out agent_context.json
 caereflex export markdown caereflex.json --out case_report.md
 ```
 
-## Supported artefacts
+## Supported files
 
 - Gmsh `.geo` in core mode; `.msh` with optional mesh extras.
 - OpenFOAM-like case folders through read-only text inspection.
