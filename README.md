@@ -432,7 +432,7 @@ caereflex export agent-context caereflex.json --out agent_context.json
 caereflex export markdown caereflex.json --out case_report.md
 ```
 
-## Documentation
+## Supported files
 
 - `QUICKSTART.md` — short offline and mock-CrossRef commands.
 - `docs/CLI.md` — CLI command overview and exit codes.
