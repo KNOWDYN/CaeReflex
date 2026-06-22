@@ -82,8 +82,6 @@
     }
     .pill.primary { background: var(--ink); color: white; border-color: var(--ink); }
     .pill.primary:hover { color: white; transform: translateY(-1px); }
-    .download-link { display: inline-flex; align-items: center; gap: 8px; }
-    .github-icon { width: 16px; height: 16px; flex: 0 0 auto; }
 
     main { padding-bottom: 70px; }
     section { scroll-margin-top: 92px; }
@@ -203,10 +201,7 @@
         <a href="#pipeline">Pipeline</a>
         <a href="#quickstart">Quickstart</a>
         <a href="#examples">Examples</a>
-        <a class="pill primary download-link" href="https://github.com/KNOWDYN/CaeReflex/archive/HEAD.zip" aria-label="Download CaeReflex from GitHub">
-          <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.62 7.62 0 0 1 8 3.86c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
-          <span>Download CaeReflex</span>
-        </a>
+        <a class="pill primary" href="../README.md">GitHub</a>
       </div>
     </nav>
   </header>
@@ -225,8 +220,8 @@
           </ul>
           <div class="hero-actions">
             <a class="pill primary" href="#quickstart">Start in 3 commands</a>
-            <a class="pill" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/openapi/openapi.yaml">OpenAPI YAML</a>
-            <a class="pill" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/REFLEXCASE_SCHEMA.md">ReflexCase schema</a>
+            <a class="pill" href="../openapi/openapi.yaml">OpenAPI YAML</a>
+            <a class="pill" href="../docs/REFLEXCASE_SCHEMA.md">ReflexCase schema</a>
           </div>
         </article>
 
@@ -312,7 +307,7 @@ POST /cases/{case_id}/crossref/attach</code></pre>
         <article class="paper-card">
           <h3>Agent-safe sequence</h3>
           <p>Health check → import case → retrieve agent context → list inspection flags → summarize only detected evidence → ask a qualified human to review engineering conclusions.</p>
-          <div class="hero-actions"><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/REST_API.md">REST API docs</a><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/AGENT_INTEGRATION.md">Agent guide</a></div>
+          <div class="hero-actions"><a class="pill" href="../docs/REST_API.md">REST API docs</a><a class="pill" href="../docs/AGENT_INTEGRATION.md">Agent guide</a></div>
         </article>
       </div>
     </section>
@@ -343,11 +338,11 @@ POST /cases/{case_id}/crossref/attach</code></pre>
         <p>The example cards use native horizontal scrolling on phones and trackpads. No installation prompt, no app shell, no heavy framework.</p>
       </div>
       <div class="swipe-track" aria-label="Example cards with swipe browsing">
-        <article class="example-card"><h3>gmsh_minimal</h3><p>Small `.geo` example for fast geometry inspection.</p><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/tree/HEAD/examples/gmsh_minimal">Open example</a></article>
-        <article class="example-card"><h3>openfoam_cavity_minimal</h3><p>OpenFOAM-like cavity case for dictionary and setting inspection.</p><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/tree/HEAD/examples/openfoam_cavity_minimal">Open example</a></article>
-        <article class="example-card"><h3>vtk_minimal</h3><p>Legacy VTK sample for result-field discovery.</p><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/tree/HEAD/examples/vtk_minimal">Open example</a></article>
-        <article class="example-card"><h3>crossref_context</h3><p>Mocked literature metadata workflow for safe, testable CrossRef context.</p><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/tree/HEAD/examples/crossref_context">Open example</a></article>
-        <article class="example-card"><h3>agent_workflow</h3><p>Sample agent context, report, and tool notes for Custom GPT or Claude-style workflows.</p><a class="pill" href="https://github.com/KNOWDYN/CaeReflex/tree/HEAD/examples/agent_workflow">Open example</a></article>
+        <article class="example-card"><h3>gmsh_minimal</h3><p>Small `.geo` example for fast geometry inspection.</p><a class="pill" href="../examples/gmsh_minimal/README.md">Open example</a></article>
+        <article class="example-card"><h3>openfoam_cavity_minimal</h3><p>OpenFOAM-like cavity case for dictionary and setting inspection.</p><a class="pill" href="../examples/openfoam_cavity_minimal/README.md">Open example</a></article>
+        <article class="example-card"><h3>vtk_minimal</h3><p>Legacy VTK sample for result-field discovery.</p><a class="pill" href="../examples/vtk_minimal/README.md">Open example</a></article>
+        <article class="example-card"><h3>crossref_context</h3><p>Mocked literature metadata workflow for safe, testable CrossRef context.</p><a class="pill" href="../examples/crossref_context/README.md">Open example</a></article>
+        <article class="example-card"><h3>agent_workflow</h3><p>Sample agent context, report, and tool notes for Custom GPT or Claude-style workflows.</p><a class="pill" href="../examples/agent_workflow/README.md">Open example</a></article>
       </div>
       <div class="swipe-hint">Swipe or shift-scroll to browse cards.</div>
     </section>
@@ -358,12 +353,12 @@ POST /cases/{case_id}/crossref/attach</code></pre>
         <p>Short paths for engineers adapting the project and researchers checking schema, examples, and citation details.</p>
       </div>
       <div class="grid-3">
-        <a class="doc-card" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/CLI.md"><h3>CLI</h3><p>Inspect, export, serve, and run examples.</p></a>
-        <a class="doc-card" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/REST_API.md"><h3>REST API</h3><p>Endpoints for health, cases, exports, literature, and OpenAPI.</p></a>
-        <a class="doc-card" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/REFLEXCASE_SCHEMA.md"><h3>Schema</h3><p>The ReflexCase record and supporting models.</p></a>
-        <a class="doc-card" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/ADAPTERS.md"><h3>Adapters</h3><p>Contracts for adding new CAE inspectors.</p></a>
-        <a class="doc-card" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/CROSSREF.md"><h3>CrossRef</h3><p>Explicit-only DOI metadata and literature context.</p></a>
-        <a class="doc-card" href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/DEVELOPER_GUIDE.md"><h3>Developer guide</h3><p>Repository structure, services, tests, and safety rules.</p></a>
+        <a class="doc-card" href="../docs/CLI.md"><h3>CLI</h3><p>Inspect, export, serve, and run examples.</p></a>
+        <a class="doc-card" href="../docs/REST_API.md"><h3>REST API</h3><p>Endpoints for health, cases, exports, literature, and OpenAPI.</p></a>
+        <a class="doc-card" href="../docs/REFLEXCASE_SCHEMA.md"><h3>Schema</h3><p>The ReflexCase record and supporting models.</p></a>
+        <a class="doc-card" href="../docs/ADAPTERS.md"><h3>Adapters</h3><p>Contracts for adding new CAE inspectors.</p></a>
+        <a class="doc-card" href="../docs/CROSSREF.md"><h3>CrossRef</h3><p>Explicit-only DOI metadata and literature context.</p></a>
+        <a class="doc-card" href="../docs/DEVELOPER_GUIDE.md"><h3>Developer guide</h3><p>Repository structure, services, tests, and safety rules.</p></a>
       </div>
     </section>
   </main>
@@ -377,31 +372,31 @@ POST /cases/{case_id}/crossref/attach</code></pre>
       </div>
       <div>
         <h3>Project</h3>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/README.md">README</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/QUICKSTART.md">Quickstart</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/INSTALL.md">Install</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/CHANGELOG.md">Changelog</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/SECURITY.md">Security</a>
+        <a href="../README.md">README</a>
+        <a href="../QUICKSTART.md">Quickstart</a>
+        <a href="../INSTALL.md">Install</a>
+        <a href="../CHANGELOG.md">Changelog</a>
+        <a href="../SECURITY.md">Security</a>
       </div>
       <div>
-        <h3>Engineering docs</h3>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/CLI.md">CLI guide</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/REST_API.md">REST API</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/AGENT_INTEGRATION.md">Agent integration</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/REFLEXCASE_SCHEMA.md">ReflexCase schema</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/docs/DEVELOPER_GUIDE.md">Developer guide</a>
+        <h3>Build</h3>
+        <a href="../pyproject.toml">pyproject.toml</a>
+        <a href="../openapi/openapi.yaml">OpenAPI YAML</a>
+        <a href="../openapi/openapi.json">OpenAPI JSON</a>
+        <a href="../wiki/docs/index.md">Wiki index</a>
+        <a href="../scripts/smoke_test.sh">Smoke test</a>
       </div>
       <div>
         <h3>License & citation</h3>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/LICENSE.md">License</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/ACADEMIC_USE.md">Academic use</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/COMMERCIAL_LICENSE.md">Commercial license</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/NOTICE.md">Notice</a>
-        <a href="https://github.com/KNOWDYN/CaeReflex/blob/HEAD/THIRD_PARTY_NOTICES.md">Third-party notices</a>
+        <a href="../LICENSE.md">License</a>
+        <a href="../ACADEMIC_USE.md">Academic use</a>
+        <a href="../COMMERCIAL_LICENSE.md">Commercial license</a>
+        <a href="../CITATION.cff">Citation</a>
+        <a href="../THIRD_PARTY_NOTICES.md">Third-party notices</a>
       </div>
     </div>
     <div class="wrap copyright">
-      <strong>License and copyright.</strong> Copyright © 2026 KNOWDYN LTD. CaeReflex is source-available software owned and licensed by KNOWDYN LTD unless a repository file states otherwise. Academic research and teaching use are described in the project license files; commercial use requires the appropriate commercial license. Review the linked repository license documents for the authoritative terms.
+      <strong>License and copyright.</strong> CaeReflex is source-available. Academic research and teaching use are described in the project license files; commercial use requires the appropriate commercial license. Copyright belongs to the CaeReflex Project and other stated rights holders. Review the repository license documents for the authoritative terms.
     </div>
   </footer>
 
