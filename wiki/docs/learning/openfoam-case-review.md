@@ -91,3 +91,97 @@ Inspect how the OpenFOAM adapter handles bounded scanning and safe text inspecti
 - [ ] The learner distinguishes file inspection from solver execution.
 - [ ] The learner explains at least one detected setting or source file.
 - [ ] The learner lists follow-up checks without saying CaeReflex validated the simulation.
+
+## Answer key
+
+Use these examples to grade whether learners preserve file evidence, adapter limits, and safe-use boundaries.
+
+### Beginner exercise answer key
+
+**Sample acceptable answer**
+
+- Three inspected or referenced files are `system/controlDict`, `system/fvSchemes`, and `0/U`.
+- Other acceptable files for the bundled example include `system/fvSolution`, `constant/polyMesh/boundary`, `constant/transportProperties`, `constant/turbulenceProperties`, and `0/p` when present in the exported `source_files` list.
+- These are files CaeReflex read or referenced during metadata extraction; they are not evidence that OpenFOAM was executed.
+
+**Unsafe or incorrect answer**
+
+- "The inspected files prove the solver ran and the cavity benchmark converged."
+
+**Why the acceptable answer passes**
+
+- It quotes source-file evidence from the exported agent context and keeps the claim at the level of read-only inspection.
+- It does not infer numerical correctness from the presence of OpenFOAM dictionaries or initial field files.
+
+**Why the unsafe answer fails**
+
+- File discovery and dictionary parsing do not run the solver.
+- Convergence requires explicit solver-log or residual evidence and qualified interpretation, not just source-file paths.
+
+**References**
+
+- Command output to cite: `python -m json.tool openfoam_agent_context.json | head -80` for `source_files`, `result_fields`, and `inspection_warnings`; `sed -n '1,160p' openfoam_report.md` for the report limitation text.
+- Adapter behavior: `caereflex/adapters/openfoam.py` scans the expected OpenFOAM dictionary paths and files in the `0/` directory, then records file hashes and trace source files.
+- Safety rule: `caereflex/exporters.py` and `wiki/docs/user-guide/safe-use-policy.md` prohibit validation, convergence, mesh adequacy, certification, and design-safety claims.
+
+### Practitioner exercise answer key
+
+**Sample acceptable answer**
+
+#### Detected evidence
+
+CaeReflex identified the folder as an OpenFOAM case and recorded file-derived evidence from dictionaries and initial field files, including source-file paths and hashes in `openfoam_agent_context.json`. It extracted field records such as `U` and `p` when the corresponding files are present, and it may extract boundary-condition, material-property, and numerical-setting records from recognized OpenFOAM dictionaries.
+
+#### Inspection limitations
+
+The inspection is read-only metadata extraction. It does not execute OpenFOAM, does not check mesh quality, does not prove that boundary conditions are physically correct, and does not establish convergence or validation. Empty `inspection_warnings` only means the adapter emitted no flag for this fixture.
+
+#### Human follow-up checks
+
+A qualified reviewer should inspect mesh quality, patch semantics, dimensions and units, solver choice, discretization schemes, tolerances, physical assumptions, residual histories, conservation checks, benchmark comparisons, and acceptance criteria before making engineering decisions.
+
+**Unsafe or incorrect answer**
+
+- "Detected evidence: the solver settings are correct. Limitations: none. Human checks: no follow-up needed because the exported report is a certification."
+
+**Why the acceptable answer passes**
+
+- It distinguishes detected metadata from engineering acceptance.
+- It gives concrete follow-up checks without claiming CaeReflex performed them.
+
+**Why the unsafe answer fails**
+
+- It declares correctness and certification unsupported by the adapter or report.
+- It removes required human review.
+
+**References**
+
+- Command output to cite: `python -m json.tool openfoam_agent_context.json | head -80` and `sed -n '1,160p' openfoam_report.md`.
+- Adapter behavior: `_parse_file` in `caereflex/adapters/openfoam.py` maps recognized files to solver records, numerical settings, material properties, boundary conditions, and result fields.
+- Safety rule: `caereflex/exporters.py` Markdown report preamble says the report is not validation, certification, safety approval, or convergence proof.
+
+### Expert extension answer key
+
+**Sample acceptable answer**
+
+The OpenFOAM adapter performs bounded, read-only text inspection. It starts from a case folder, records an `openfoam_inspection_started` provenance event, checks a fixed list of expected OpenFOAM paths, adds warnings for missing expected files, scans the `0/` directory for initial field files, and limits post-processing/log collection to a small slice. For each considered file, it hashes up to the configured maximum file size and parses simple dictionary entries with regular expressions. An additional useful read-only flag would be `missing_initial_field_boundaryField`: warn when a `0/` field file lacks a `boundaryField` block or when a boundary patch appears in `constant/polyMesh/boundary` but is not represented in a field file.
+
+**Unsafe or incorrect answer**
+
+- "Improve the adapter by automatically running OpenFOAM, modifying bad boundary files, and suppressing warnings so agents can state the case is validated."
+
+**Why the acceptable answer passes**
+
+- The proposed flag improves review quality without changing source files or claiming solver results.
+- It stays within CaeReflex's role as evidence extraction and review support.
+
+**Why the unsafe answer fails**
+
+- It changes the system from read-only inspection into solver execution and file mutation.
+- It suppresses safety evidence and encourages unsupported validation claims.
+
+**References**
+
+- Command output to cite: `python -m json.tool openfoam_agent_context.json | head -80` for extracted records and warning shape.
+- Adapter behavior: `caereflex/adapters/openfoam.py` expected paths, `0/` scan, limited log/post-processing scan, hashing, simple dictionary parsing, and residual-like-line flagging.
+- Safety rule: `wiki/docs/user-guide/safe-use-policy.md` requires treating output as structured evidence rather than engineering validation.
