@@ -9,7 +9,7 @@ This guide maps the repository layout to the runtime entry points that inspect C
 | `caereflex/core/` | Shared domain models, configuration, errors, fingerprinting, provenance, and validation. | `models.py` defines `ReflexCase`, `AdapterResult`, evidence records, flags, and export/provenance records. `config.py` owns scan and request limits. `validation.py` owns path-safety helpers and display-path sanitization. |
 | `caereflex/adapters/` | File/domain adapters for Gmsh, OpenFOAM, and VTK. | `base.py` defines the adapter interface. Concrete adapters inspect artefacts and return `AdapterResult` without owning CLI, REST, or output-format logic. |
 | `caereflex/evidence/` | Literature and metadata enrichment. | `crossref.py` searches/parses CrossRef metadata, builds `LiteratureContext`, and attaches metadata-derived `LiteratureEvidenceRecord` values. |
-| `caereflex/exporters.py` | Output formats. | Owns ReflexCase JSON, agent-context JSON, agent-context Markdown, human Markdown reports, and BibTeX. Exporters must preserve safe-use and do-not-claim guidance. |
+| `caereflex/exporters.py` | Output formats. | Owns ReflexCase JSON, agent context JSON, agent context Markdown, human Markdown reports, and BibTeX. Exporters must preserve safe-use and do-not-claim guidance. |
 | `caereflex/services.py` | Orchestration and business logic. | Central public workflow layer for inspection, adapter selection, CrossRef search/attach, case persistence, exports, and bundled examples. CLI and REST should call this layer instead of duplicating workflow logic. |
 | `caereflex/cli/main.py` | Typer CLI entry point. | Defines `caereflex` commands, command-specific options, user-facing output, and exit codes. Business behavior should be delegated to `services.py`. |
 | `caereflex/server/app.py` | FastAPI REST/OpenAPI entry point. | Defines REST request/response models, local/external API-key checks, workspace path resolution, OpenAPI generation, and REST routes. Workflow behavior should be delegated to `services.py`. |
@@ -40,8 +40,8 @@ This guide maps the repository layout to the runtime entry points that inspect C
    - Keep REST workspace resolution and external-host restrictions in `caereflex/server/app.py`.
    - Do not add ad-hoc `../` handling or absolute-path redaction in individual adapters unless it is adapter-specific metadata cleanup; prefer central helpers.
 
-5. **CaeReflex extracts evidence; it does not validate simulations.**
-   - No code path should imply solver execution, convergence proof, mesh adequacy, certification, design safety, or full-paper review from metadata.
+5. **CaeReflex extracts evidence; it does not inspect engineering correctness.**
+   - No code path should imply solver execution, convergence, mesh adequacy, certification, safety conclusions, or full-paper review from metadata.
 
 ## Dependency extras
 
@@ -109,7 +109,7 @@ Use this sequence for any new public behavior:
    - `case_id`, `case_name`, `case_type`, `detected_formats`, and `detected_tools`.
    - `source_files` with relative/display-safe paths, suffixes, sizes, hash status, and trace data.
    - Domain records (`assets`, `solver_records`, `boundary_conditions`, `materials`, `numerical_settings`, `result_fields`) as appropriate.
-   - `inspection_flags` for warnings, skipped files, missing optional dependencies, unsupported files, or partial extraction.
+   - `inspection_flags` for skipped files, missing optional dependencies, unsupported files, or partial extraction.
    - `provenance` records for major extraction steps.
    - `agent_summary` with conservative next actions and do-not-claim notes.
 4. Respect `CaeReflexConfig` limits (`max_file_size_mb`, `max_scan_depth`, `max_scan_files`) and do not traverse unbounded directories.
@@ -146,7 +146,7 @@ When extending it:
   - Do not infer full-paper access from DOI, title, URL, or citation counts.
 - Keep `TraceInfo(source_kind=external_metadata, adapter="crossref")` or an equivalent trace for literature records.
 - Keep `LiteratureContext.limitations` and `do_not_claim` explicit.
-- Do not write summaries that state or imply the simulation was validated, peer reviewed, benchmarked, certified, or proven correct by CrossRef results.
+- Do not write summaries that state or imply the simulation correctness was established, peer reviewed, benchmarked, certified, or shown correct by CrossRef results.
 - Prefer mock-response tests for deterministic coverage; mark live API tests separately if added.
 
 ## Safety and security checklist
@@ -155,7 +155,7 @@ Before merging, verify the change respects these constraints:
 
 - **No solver execution:** CaeReflex inspects files only. It must not run OpenFOAM solvers, Gmsh generation, VTK pipelines requiring arbitrary user code, shell scripts, Makefiles, or post-processing commands.
 - **No path traversal:** External REST mode must keep paths inside the configured workspace. Reuse `assert_safe_workspace_path` and `safe_display_path`; do not introduce unreviewed path resolution logic.
-- **No validation/certification claims:** Outputs must not claim convergence, mesh adequacy, design safety, engineering certification, or simulation validation unless explicit future evidence models are designed for that purpose and still clearly scoped.
+- **No certification claims:** Outputs must not claim convergence, mesh adequacy, safety conclusions, engineering certification, or simulation correctness unless explicit future evidence models are designed for that purpose and still clearly scoped.
 - **No full-paper claims from CrossRef metadata:** CrossRef records are metadata/abstract context only. Do not state that papers were read, reviewed, or used as full-text evidence unless a separate full-text feature exists and clearly records that provenance.
 - **Respect file-size and scan limits:** Honor `CaeReflexConfig.max_file_size_mb`, `max_scan_depth`, `max_scan_files`, and server request limits. Large or skipped files should produce flags/status rather than unbounded reads.
 - **Keep base imports safe:** Optional extras must not make `import caereflex` fail when not installed.
@@ -195,7 +195,7 @@ Every public change must update documentation in the same pull request:
 
 - Public CLI command or option changes must update the corresponding CLI/user documentation.
 - REST endpoint, request, response, or authentication behavior changes must update REST/OpenAPI documentation and generated/static OpenAPI artefacts if maintained in the repo.
-- Model field additions, removals, or semantic changes must update schema/model documentation and exporter expectations.
+- ReflexCase field additions, removals, or semantic changes must update schema/model documentation and exporter expectations.
 - Bundled example additions or behavior changes must update `examples/` docs and any example index/listing.
 - Export format changes must update exporter docs and agent-facing guidance.
 - Safety, security, or claim-boundary changes must update the safety documentation and tests.

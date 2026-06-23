@@ -100,7 +100,7 @@ This command:
 
 1. inspects `PATH` using automatic adapter detection;
 2. writes the full ReflexCase JSON to `--out`;
-3. optionally writes an agent-context JSON file when `--agent-context` is provided;
+3. optionally writes an agent context JSON file when `--agent-context` is provided;
 4. optionally writes a Markdown report when `--report` is provided;
 5. prints status, case ID, summary, outputs, and warnings unless `--json` is used.
 
@@ -146,7 +146,7 @@ Install `.[vtk]` when you need optional PyVista/VTK-backed behavior. Core fallba
 
 ## CrossRef commands
 
-CrossRef commands are explicit metadata lookups. They retrieve DOI metadata and available abstracts where provided by CrossRef; they do not read full papers, scrape publishers, validate simulations, or certify engineering results.
+CrossRef commands are explicit metadata lookups. They retrieve DOI metadata and available abstracts where provided by CrossRef; they do not read full papers, scrape publishers, inspect simulations for correctness, or certify engineering results.
 
 ### `caereflex crossref search`
 
@@ -314,7 +314,7 @@ What to try:
    caereflex inspect PATH --max-scan-depth 6 --max-scan-files 2000 --max-file-size-mb 100
    ```
 
-4. Read the warnings in the CLI output or in the generated case JSON before drawing conclusions. CaeReflex reports detected evidence; it does not validate or certify the simulation.
+4. Read the inspection flags in the CLI output or in the generated case JSON before drawing conclusions. CaeReflex reports detected evidence; it does not certify the simulation or inspect it for correctness.
 
 ### Missing optional dependencies
 

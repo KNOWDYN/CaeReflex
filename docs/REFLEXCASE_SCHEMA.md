@@ -12,7 +12,7 @@ Typical lifecycle:
 2. **Inspect**: adapters populate `source_files`, `assets`, solver-related records, result fields, and review-oriented `inspection_flags`. Each extracted or inferred item should carry `trace` metadata when practical.
 3. **Enrich**: optional enrichers can add external metadata such as CrossRef literature evidence and update `literature_context`.
 4. **Summarize/export**: agents or exporters can populate `agent_summary`, `exports`, and `provenance` records.
-5. **Consume**: downstream consumers should treat absent optional collections as normal, use provenance and trace confidence to decide how much to trust a record, and avoid treating review prompts as validation.
+5. **Consume**: downstream consumers should treat absent optional collections as normal, use provenance and trace confidence to decide how much to trust a record, and avoid treating review prompts as correctness evidence.
 
 ## `ReflexCase` field table
 
@@ -219,7 +219,7 @@ Case-level `provenance` records complement trace data by recording events, times
 Default `do_not_claim` values are:
 
 - Do not claim that metadata-only records were read as full papers.
-- Do not claim that CrossRef evidence validates the simulation.
+- Do not claim that CrossRef evidence shows simulation correctness.
 
 ### `InspectionFlag`
 
@@ -349,25 +349,25 @@ These examples include explicit fields for readability. In actual model construc
   "literature_evidence": [
     {
       "doi": "10.0000/example",
-      "title": "Example CFD validation study",
+      "title": "Example CFD benchmark metadata study",
       "authors": ["A. Researcher"],
       "year": 2024,
       "container_title": "Example Journal",
       "url": "https://doi.org/10.0000/example",
       "evidence_status": "metadata_only",
       "relevance_score": 0.72,
-      "query": "CFD validation benchmark",
+      "query": "CFD benchmark metadata",
       "trace": {"source_kind": "external_metadata", "source_files": [], "adapter": "crossref", "confidence": 0.8, "notes": ["Metadata only; full paper not read."]}
     }
   ],
   "literature_context": {
-    "queries": ["CFD validation benchmark"],
+    "queries": ["CFD benchmark metadata"],
     "records_used": ["10.0000/example"],
     "summary": "External metadata was found for contextual comparison only.",
     "limitations": ["No full-text review was performed."],
     "do_not_claim": [
       "Do not claim that metadata-only records were read as full papers.",
-      "Do not claim that CrossRef evidence validates the simulation."
+      "Do not claim that CrossRef evidence shows simulation correctness."
     ]
   }
 }
@@ -377,6 +377,6 @@ These examples include explicit fields for readability. In actual model construc
 
 - Ignore unknown keys inside any `metadata`, `metadata_subset`, `limits`, `details`, `metrics`, `properties`, or `statistics` dictionaries unless your consumer explicitly owns those keys.
 - Do not assume optional lists are populated. Empty `source_files`, `assets`, `result_fields`, `literature_evidence`, or other collections can mean the information was absent, unsupported, skipped, or not inspected.
-- Treat `inspection_flags` as review prompts, not solver validation. They can highlight missing inputs, suspicious metadata, parser caveats, or next steps, but they do not prove a simulation is correct or incorrect.
+- Treat `inspection_flags` as review prompts, not solver output or correctness evidence. They can highlight missing inputs, suspicious metadata, parser caveats, or next steps, but they do not show a simulation is correct or incorrect.
 - Use enum strings exactly as documented, and preserve unknown top-level or nested metadata for forward compatibility when round-tripping JSON.
 - Use `trace` and `provenance` together: trace explains where a record came from, while provenance explains workflow events that occurred while building or exporting the case.

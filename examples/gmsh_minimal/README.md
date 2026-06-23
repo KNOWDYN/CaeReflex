@@ -1,6 +1,6 @@
 # gmsh_minimal
 
-[`t1.geo`](t1.geo) is a tiny hand-written Gmsh-style geometry fixture. It defines four points, four lines, one curve loop, one plane surface, and two physical groups named `walls` and `fluid`. CaeReflex inspects the text structure; it does not require Gmsh, generate a mesh, or validate mesh quality.
+[`t1.geo`](t1.geo) is a tiny hand-written Gmsh-style geometry fixture. It defines four points, four lines, one curve loop, one plane surface, and two physical groups named `walls` and `fluid`. CaeReflex inspects the text structure; it does not require Gmsh, generate a mesh, or claim mesh quality.
 
 ## Inspect the example
 
@@ -53,7 +53,7 @@ These exports are derived from the JSON inspection result and still do not run G
 - `case_type: gmsh` means the adapter recognized a Gmsh-oriented input, not that a mesh was generated or accepted.
 - The `.geo` path is recorded as a source file with hash/provenance metadata when possible.
 - Assets describe inspected geometry/mesh artefacts, not solver-ready proof.
-- CaeReflex does not claim CAD validity, watertightness, mesh adequacy, convergence, design safety, or certification from this fixture.
+- CaeReflex does not claim CAD structure, watertightness, mesh adequacy, convergence, safety conclusions, or certification from this fixture.
 
 ## Related documentation
 

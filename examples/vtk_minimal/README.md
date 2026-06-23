@@ -45,7 +45,7 @@ The result-field records are useful for agent summaries and review prompts, but 
 
 - The core adapter does not require ParaView, PyVista, or VTK Python packages for this fixture.
 - Field association is conservative for legacy text parsing.
-- No units, derived physics, interpolation quality, solver provenance, or validation claims are inferred.
+- No units, derived physics, interpolation quality, solver provenance, or correctness claims are inferred.
 - XML VTK-family files may need optional VTK/PyVista-style dependencies for deeper inspection.
 
 ## Related documentation

@@ -57,7 +57,7 @@ This fixture includes the common files expected by the adapter, so the normal ex
 
 ## CaeReflex does not run OpenFOAM
 
-CaeReflex only reads and fingerprints files. It does **not** run `blockMesh`, `simpleFoam`, `pimpleFoam`, `foamToVTK`, or any OpenFOAM utility, and it does not validate convergence, mesh adequacy, turbulence-model suitability, or engineering safety.
+CaeReflex only reads and fingerprints files. It does **not** run `blockMesh`, `simpleFoam`, `pimpleFoam`, `foamToVTK`, or any OpenFOAM utility, and it does not confirm convergence, mesh adequacy, turbulence-model suitability, or engineering safety.
 
 ## Related documentation
 

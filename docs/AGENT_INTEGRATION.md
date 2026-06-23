@@ -1,6 +1,6 @@
 # Agent integration
 
-CaeReflex exposes CAE inspection results to LLM agents through bounded, evidence-oriented surfaces. Agents should treat CaeReflex as a read-only inspection and documentation aid: it extracts or infers metadata, records provenance, surfaces warnings, and optionally attaches CrossRef metadata, but it does not validate engineering correctness.
+CaeReflex exposes CAE inspection results to LLM agents through bounded, evidence-oriented surfaces. Agents should treat CaeReflex as a read-only inspection and documentation aid: it extracts or infers metadata, records provenance, surfaces inspection flags, and optionally attaches CrossRef metadata, but it does not inspect engineering correctness.
 
 ## Integration modes
 
@@ -26,7 +26,7 @@ Primary REST surfaces:
 | Full case JSON | `GET /cases/{case_id}` | Returns the `ReflexCase` representation. |
 | Summary | `GET /cases/{case_id}/summary` | Lightweight status, summary, formats, and tools. |
 | Agent context | `GET /cases/{case_id}/agent-context` | Best default input for LLM summarization. |
-| Inspection flags | `GET /cases/{case_id}/inspection-flags` | Warnings/errors/review prompts. |
+| Inspection flags | `GET /cases/{case_id}/inspection-flags` | Warnings, errors, and review prompts. |
 | Literature metadata | `GET /cases/{case_id}/literature` | Existing attached CrossRef metadata only. |
 | CrossRef search | `POST /cases/{case_id}/crossref/search` | Search only when the user requests related research/literature context. |
 | CrossRef attach | `POST /cases/{case_id}/crossref/attach` | Mutates stored case by attaching CrossRef records; use only when requested. |
@@ -76,9 +76,9 @@ For REST/OpenAPI or developer-mediated modes, agents should follow this sequence
 1. **Health check.** Call `GET /health` and stop or explain the issue if the service is unavailable.
 2. **Import a workspace-relative path.** Call `POST /cases/import` with a workspace-relative `path`, `adapter: "auto"` unless a specific adapter is justified, `attach_crossref: false` by default, and `return_agent_context: true` when the agent can handle the returned context.
 3. **Retrieve agent context.** Call `GET /cases/{case_id}/agent-context` even if import returned context, unless the current context is already complete and fresh.
-4. **Retrieve inspection flags.** Call `GET /cases/{case_id}/inspection-flags` and surface warnings as review prompts or limitations.
+4. **Retrieve inspection flags.** Call `GET /cases/{case_id}/inspection-flags` and surface inspection flags as review prompts or limitations.
 5. **Optionally search or attach CrossRef only when requested.** Use `POST /cases/{case_id}/crossref/search` for non-mutating literature discovery or `POST /cases/{case_id}/crossref/attach` when the user wants the metadata stored with the case. Do not perform CrossRef calls silently.
-6. **Summarize with safety limits.** Summaries should distinguish extracted facts from inferred facts, cite inspection warnings, preserve uncertainty, and include do-not-claim limitations.
+6. **Summarize with safety limits.** Summaries should distinguish extracted facts from inferred facts, cite inspection flags, preserve uncertainty, and include do-not-claim limitations.
 
 A good default request body for import is:
 
@@ -132,9 +132,9 @@ A good default request body for import is:
 
    Begin live workflows with the health endpoint. When the user provides a case path, call import_engineering_case with a workspace-relative path, adapter="auto", attach_crossref=false, and return_agent_context=true. Then retrieve get_agent_context and get_inspection_flags before drafting an answer.
 
-   Use CrossRef search or attach actions only when the user explicitly asks for related research or literature context. Treat CrossRef as metadata only, not validation and not evidence that full papers were read.
+   Use CrossRef search or attach actions only when the user explicitly asks for related research or literature context. Treat CrossRef as metadata only, not engineering evidence and not a sign that full papers were read.
 
-   Summarize extracted facts separately from inferred facts. Surface inspection flags as warnings or review prompts. Never claim CaeReflex validates a simulation, proves convergence, proves mesh adequacy, certifies engineering results, establishes design safety, or confirms physical correctness.
+   Summarize extracted facts separately from inferred facts. Surface inspection flags as review prompts or limitations. Never claim CaeReflex inspected physical correctness, confirmed convergence, confirmed mesh adequacy, certified engineering results, established safety conclusions, or confirmed physical correctness.
 
    Never send arbitrary absolute host paths. Prefer paths relative to the configured CaeReflex workspace. If a path appears outside the workspace, ask the user to place or reference it inside the workspace.
    ```
@@ -162,20 +162,20 @@ Safe-use policy:
 
 - Use extracted facts as file-derived facts.
 - Treat inferred facts as tentative.
-- Treat CrossRef metadata as literature context, not validation.
+- Treat CrossRef metadata as literature context, not engineering evidence.
 - Do not claim metadata-only records were read as full papers.
 - Do not claim simulation convergence unless explicit evidence is present.
 - Do not claim mesh adequacy.
 - Do not claim engineering certification.
-- Do not claim design safety.
+- Do not claim safety conclusions.
 
 Base do-not-claim policy:
 
-- Do not claim that CaeReflex validates this simulation.
+- Do not claim that CaeReflex inspected this simulation for correctness.
 - Do not claim convergence unless explicit residual/convergence evidence is present.
 - Do not claim mesh adequacy.
 - Do not claim engineering certification.
-- Do not claim design safety.
+- Do not claim safety conclusions.
 - Do not claim metadata-only CrossRef records were read as full papers.
 
 Adapters may add more case-specific `agent_summary.do_not_claim` items. The exported agent context merges the base list with adapter-provided items; agents should obey the merged `do_not_claim` field, not only the base list above.
@@ -187,19 +187,19 @@ Use or adapt these snippets in system prompts, tool descriptions, or developer w
 ### General safety snippet
 
 ```text
-CaeReflex provides inspection metadata, provenance, warnings, and optional literature metadata. It is not a solver, validator, certification authority, safety reviewer, or substitute for qualified engineering judgment. Do not claim validation, convergence, mesh adequacy, certification, design safety, or physical correctness unless independent explicit evidence is provided outside CaeReflex metadata.
+CaeReflex provides inspection metadata, provenance, inspection flags, and optional literature metadata. It is not a solver, certification authority, safety reviewer, or substitute for qualified engineering judgment. Do not claim correctness, convergence, mesh adequacy, certification, safety conclusions, or physical correctness unless independent explicit evidence is provided outside CaeReflex metadata.
 ```
 
 ### CrossRef snippet
 
 ```text
-CrossRef results are bibliographic metadata and related-literature context only. Do not describe metadata-only records as papers you have read. Do not use CrossRef records to validate the simulation, prove correctness, confirm mesh adequacy, certify design safety, or establish convergence.
+CrossRef results are bibliographic metadata and related-literature context only. Do not describe metadata-only records as papers you have read. Do not use CrossRef records to claim simulation correctness, mesh adequacy, safety conclusions, certification, or convergence.
 ```
 
 ### Context-file snippet
 
 ```text
-Read agent_context.json first. Separate extracted_facts from inferred_facts. Use inspection_warnings as limitations or review prompts. Follow every safe_use_policy and do_not_claim item. Use case_report.md only as a readable companion, not as validation evidence.
+Read agent_context.json first. Separate extracted_facts from inferred_facts. Use inspection_warnings as limitations or review prompts. Follow every safe_use_policy and do_not_claim item. Use case_report.md only as a readable companion, not as correctness evidence.
 ```
 
 ### Path-safety snippet

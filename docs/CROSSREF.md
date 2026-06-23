@@ -10,7 +10,7 @@ The CrossRef integration is intended to enrich a `ReflexCase` with related liter
 - Abstract text when the CrossRef work record includes an abstract.
 - A `LiteratureContext` summary that records the queries used, records used, and limitations.
 
-This context helps users see potentially related DOI records next to the engineering case. It is not a simulation validator, a verification workflow, or a literature-review engine.
+This context helps users see potentially related DOI records next to the engineering case. It is not an engineering-correctness checker, a proof workflow, or a literature-review engine.
 
 ## Explicit-only behavior
 
@@ -40,7 +40,7 @@ Behavior:
 4. Duplicate query strings are removed while preserving order.
 5. If no query was otherwise generated, the case name is used as the fallback.
 
-For example, the sample case named `openfoam_cavity_minimal` has physics tags such as `CFD`, `finite volume`, and `incompressible flow`, plus the detected tool `OpenFOAM`. With `include_case_tags=true`, a generated query can therefore include both the case identity and physics/tool context. These tags only influence text search terms; they are not treated as evidence that a CrossRef record validates the case.
+For example, the sample case named `openfoam_cavity_minimal` has physics tags such as `CFD`, `finite volume`, and `incompressible flow`, plus the detected tool `OpenFOAM`. With `include_case_tags=true`, a generated query can therefore include both the case identity and physics/tool context. These tags only influence text search terms; they are not treated as evidence that a CrossRef record shows case correctness.
 
 ## CLI workflows
 
@@ -49,7 +49,7 @@ For example, the sample case named `openfoam_cavity_minimal` has physics tags su
 Use `crossref search` to return records and a literature context without writing them back into the input case:
 
 ```bash
-caereflex crossref search CASE_JSON --query "lid-driven cavity OpenFOAM"
+caereflex crossref search CASE_JSON --query "lid-driven cavity OpenFOAM metadata"
 ```
 
 Useful options:
@@ -66,7 +66,7 @@ Use `crossref attach` to mutate the exported `ReflexCase` by adding `literature_
 
 ```bash
 caereflex crossref attach CASE_JSON \
-  --query "lid-driven cavity OpenFOAM" \
+  --query "lid-driven cavity OpenFOAM metadata" \
   --out caereflex.with_literature.json
 ```
 
@@ -84,7 +84,7 @@ Example request body:
 
 ```json
 {
-  "query": "lid-driven cavity OpenFOAM",
+  "query": "lid-driven cavity OpenFOAM metadata",
   "include_case_tags": true,
   "limit": 5,
   "mailto": "user@example.com",
@@ -100,7 +100,7 @@ Example request body:
 
 ```json
 {
-  "query": "lid-driven cavity OpenFOAM",
+  "query": "lid-driven cavity OpenFOAM metadata",
   "include_case_tags": true,
   "limit": 5,
   "mailto": "user@example.com",
@@ -138,7 +138,7 @@ Current CrossRef parsing marks records as `abstract_available` when an abstract 
 
 ## Relevance score
 
-`relevance_score` is lightweight text matching, not scientific validation.
+`relevance_score` is lightweight text matching, not scientific evidence.
 
 CaeReflex tokenizes the query into alphanumeric terms longer than two characters, then checks how many of those terms appear in the combined title and abstract text. The score is the fraction of query terms found, rounded to three decimals.
 
@@ -162,7 +162,7 @@ Run the mock attach workflow:
 
 ```bash
 caereflex crossref attach examples/crossref_context/sample_case.json \
-  --query "lid-driven cavity OpenFOAM" \
+  --query "lid-driven cavity OpenFOAM metadata" \
   --mock-response examples/crossref_context/mock_crossref_response.json \
   --limit 5 \
   --out caereflex.with_literature.json
@@ -184,6 +184,6 @@ caereflex export bibtex CASE_JSON --out references.bib
 
 Always preserve these interpretation limits when presenting CrossRef results:
 
-- CrossRef metadata does not validate simulation setup.
+- CrossRef metadata does not show simulation setup correctness.
 - Metadata-only records were not read as full papers.
 - Abstract availability does not imply complete literature review.

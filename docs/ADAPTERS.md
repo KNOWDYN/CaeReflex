@@ -1,6 +1,6 @@
 # Adapter Guide
 
-CaeReflex adapters translate CAE-oriented inputs into a `ReflexCase` model. They are intentionally conservative: adapters inspect, fingerprint, and summarize evidence, but they do not run solvers or validate an engineering design.
+CaeReflex adapters translate CAE-oriented inputs into a `ReflexCase` model. They are intentionally conservative: adapters inspect, fingerprint, and summarize evidence, but they do not run solvers or inspect engineering correctness.
 
 ## Adapter contract
 
@@ -44,7 +44,7 @@ For `.geo` files, the adapter performs text-based inspection and records:
 - boundary-condition-like records for physical groups, using the group label, physical kind, and member list;
 - source-file hashes and trace information.
 
-This is structural extraction only. It does not evaluate CAD validity, mesh quality, geometric watertightness, or whether physical groups are complete.
+This is structural extraction only. It does not evaluate CAD structure, mesh quality, geometric watertightness, or whether physical groups are complete.
 
 ### `.msh` fingerprinting and optional deeper inspection
 
@@ -58,7 +58,7 @@ STEP and IGES-family files are treated as best-effort geometry inputs. The adapt
 
 ### Safety limits and do-not-claim guidance
 
-The adapter respects configured file-count and file-size limits while hashing and scanning. Its summaries include explicit do-not-claim guidance, including not claiming mesh adequacy or design safety. Adapter output should be treated as evidence extracted from files, not as verification.
+The adapter respects configured file-count and file-size limits while hashing and scanning. Its summaries include explicit do-not-claim guidance, including not claiming mesh adequacy, engineering correctness, or safety conclusions. Adapter output should be treated as evidence extracted from files, not as proof.
 
 ## OpenFOAM adapter
 
@@ -130,7 +130,7 @@ XML VTK-family files (`.vtu`, `.vtp`, `.vti`, `.vtr`, `.vts`) are fingerprinted 
 
 ### Result-field limitations
 
-Field extraction is conservative. Legacy `.vtk` field association is recorded as point-associated for extracted scalar/vector declarations, and no derived physics, units, validation, interpolation quality, or correctness claims are made. XML-family files are not deeply parsed by the core adapter.
+Field extraction is conservative. Legacy `.vtk` field association is recorded as point-associated for extracted scalar/vector declarations, and no derived physics, units, interpolation quality, or correctness claims are made. XML-family files are not deeply parsed by the core adapter.
 
 ## Hashing and path limits
 
@@ -157,8 +157,8 @@ All recorded paths should be safe display paths rather than unbounded or unsafe 
 4. Register the adapter name and any aliases in `caereflex/services.py::inspect_with_adapter`.
 5. Add a CLI command only if users need explicit CLI access beyond `adapter="auto"` or existing generic inspection commands.
 6. Add tests for:
-   - model validity: returned cases validate as `ReflexCase` / `AdapterResult`;
-   - partial-success warnings: missing optional dependencies or incomplete inputs produce warnings rather than false success;
+   - model structure: returned cases serialize as `ReflexCase` / `AdapterResult`;
+   - partial-success inspection flags: missing optional dependencies or incomplete inputs produce inspection flags rather than false success;
    - path safety: unsafe, missing, oversized, or out-of-workspace paths are handled explicitly;
    - unsupported inputs: unsupported formats return or raise clear unsupported/failed results at the correct layer.
 
@@ -166,9 +166,9 @@ All recorded paths should be safe display paths rather than unbounded or unsafe 
 
 Do not implement adapters that:
 
-- execute solvers, preprocessors, mesh generators, converters, or validation tools as part of inspection;
+- execute solvers, preprocessors, mesh generators, converters, or external solver/checking tools as part of inspection;
 - write reports, REST responses, case-store records, or arbitrary external files directly;
 - bypass services/exporters for persistence or presentation;
-- claim convergence, mesh adequacy, CAD validity, simulation validation, certification, safety, or regulatory compliance;
+- claim convergence, mesh adequacy, CAD structure, simulation correctness, certification, safety conclusions, or regulatory compliance;
 - hide missing files or optional dependencies as successful deep inspection;
 - return loosely structured dictionaries when a typed `AdapterResult` / `ReflexCase` record is required.

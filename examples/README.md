@@ -62,7 +62,7 @@ caereflex inspect-vtk examples/vtk_minimal/sample.vtk \
   --out build/vtk_case.json
 
 caereflex crossref attach examples/crossref_context/sample_case.json \
-  --query "lid-driven cavity OpenFOAM" \
+  --query "lid-driven cavity OpenFOAM metadata" \
   --mock-response examples/crossref_context/mock_crossref_response.json \
   --limit 5 \
   --out build/case_with_literature.json

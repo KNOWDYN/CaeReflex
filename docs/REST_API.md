@@ -41,7 +41,7 @@ The server enforces the API key for externally bound hosts. If the key is missin
 
 - Relative paths are resolved against the configured workspace.
 - Absolute paths are resolved as absolute filesystem paths.
-- When the server is externally bound, `assert_safe_workspace_path` validates the resolved import path and prevents path traversal outside the configured workspace.
+- When the server is externally bound, `assert_safe_workspace_path` checks that the resolved import path stays inside the workspace and prevents path traversal outside the configured workspace.
 
 Recommended agent behavior is to send workspace-relative paths, for example:
 
@@ -318,7 +318,7 @@ Literature response example:
 
 ### `GET /cases/{case_id}/inspection-flags`
 
-Returns inspection warnings and errors only.
+Returns inspection flags, including warning- and error-level review prompts.
 
 Inspection flags response example:
 
@@ -343,7 +343,7 @@ Request example:
 
 ```json
 {
-  "query": "OpenFOAM cavity validation",
+  "query": "OpenFOAM cavity benchmark metadata",
   "include_case_tags": true,
   "limit": 3,
   "mailto": "researcher@example.com",
@@ -357,16 +357,16 @@ Response example:
 {
   "records": [
     {
-      "title": "OpenFOAM validation studies for cavity flow",
-      "doi": "10.1234/openfoam.validation",
+      "title": "OpenFOAM benchmark metadata for cavity flow",
+      "doi": "10.1234/openfoam.metadata",
       "source": "CrossRef",
       "year": 2023,
-      "url": "https://doi.org/10.1234/openfoam.validation"
+      "url": "https://doi.org/10.1234/openfoam.metadata"
     }
   ],
   "literature_context": {
     "status": "success",
-    "query": "OpenFOAM cavity validation",
+    "query": "OpenFOAM cavity benchmark metadata",
     "record_count": 1
   }
 }
@@ -386,8 +386,8 @@ Response example:
   "case_name": "openfoam_cavity_minimal",
   "literature_evidence": [
     {
-      "title": "OpenFOAM validation studies for cavity flow",
-      "doi": "10.1234/openfoam.validation",
+      "title": "OpenFOAM benchmark metadata for cavity flow",
+      "doi": "10.1234/openfoam.metadata",
       "source": "CrossRef",
       "year": 2023
     }
@@ -552,7 +552,7 @@ RuntimeError: FastAPI is not installed. Install caereflex[server].
 - Prefer this call sequence:
   1. `POST /cases/import` with a workspace-relative path.
   2. `GET /cases/{case_id}/agent-context` to gather compact reasoning context.
-  3. `GET /cases/{case_id}/inspection-flags` to focus follow-up questions on warnings/errors.
+  3. `GET /cases/{case_id}/inspection-flags` to focus follow-up questions on inspection flags.
 
 ### Claude-style tool callers
 
