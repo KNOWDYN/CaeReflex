@@ -13,7 +13,7 @@ This directory demonstrates a deterministic, mock-first CrossRef workflow. It is
 ```bash
 mkdir -p build
 caereflex crossref attach examples/crossref_context/sample_case.json \
-  --query "lid-driven cavity OpenFOAM" \
+  --query "lid-driven cavity OpenFOAM metadata" \
   --mock-response examples/crossref_context/mock_crossref_response.json \
   --limit 5 \
   --out build/case_with_literature.json
@@ -59,7 +59,7 @@ The resulting file contains entries for the two mock DOIs, such as `10.0000/exam
 
 ## Interpretation limits
 
-CrossRef output is metadata context only. Metadata records and mock abstracts do not prove that papers were read in full, do not validate the simulation, and do not establish convergence, mesh adequacy, or design safety.
+CrossRef output is metadata context only. Metadata records and mock abstracts do not show that papers were read in full, do not claim simulation correctness, and do not establish convergence, mesh adequacy, or safety conclusions.
 
 ## Related documentation
 

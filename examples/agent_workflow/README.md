@@ -47,21 +47,21 @@ Agents should call `GET /health` first, then import workspace-relative paths wit
 - [`generic_rest_agent_notes.md`](generic_rest_agent_notes.md) — concise REST-agent reminders, including `x-api-key` outside localhost.
 - [`gemini_context_mode.md`](gemini_context_mode.md) — upload-oriented context-file notes for agents that consume files directly.
 - [`agent_context_example.json`](agent_context_example.json) — tiny example of safety fields in an agent context file.
-- [`case_report_example.md`](case_report_example.md) — tiny report reminder that generated reports are not validation.
+- [`case_report_example.md`](case_report_example.md) — tiny report reminder that generated reports are not correctness evidence.
 
 ## Safe agent prompt
 
 ```text
-You are reviewing CaeReflex output for engineering context. Read agent_context.json first. Summarize only extracted facts and clearly label inferred facts. Preserve all inspection warnings, safe_use_policy, and do_not_claim items. Do not claim solver execution, validation, convergence, mesh adequacy, certification, or design safety unless independent evidence outside CaeReflex explicitly proves it. If information is missing or partial, say so and recommend a qualified engineering review.
+You are reviewing CaeReflex output for engineering context. Read agent_context.json first. Summarize only extracted facts and clearly label inferred facts. Preserve all inspection flags, safe_use_policy, and do_not_claim items. Do not claim solver execution, correctness, convergence, mesh adequacy, certification, or safety conclusions unless independent evidence outside CaeReflex explicitly supports it. If information is missing or partial, say so and recommend a qualified engineering review.
 ```
 
 Expected agent behavior:
 
-- Reports the detected case type, source files, assets, fields, warnings, and provenance available in the context.
+- Reports the detected case type, source files, assets, fields, inspection flags, and provenance available in the context.
 - Uses REST tools or local wrappers only for narrow requested operations.
 - Does not request unrestricted filesystem access.
 - Does not run solvers or imply that CaeReflex ran them.
-- Treats CrossRef records as bibliographic metadata, not validation evidence.
+- Treats CrossRef records as bibliographic metadata, not engineering evidence.
 
 ## Related documentation
 
