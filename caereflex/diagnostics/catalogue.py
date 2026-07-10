@@ -102,6 +102,16 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "explanation": "A content-addressed artefact did not match its recorded SHA-256 digest or resolved outside the configured store.",
         "action": "Stop using the artefact, preserve logs, and recreate the local state directory from trusted sources.",
     },
+    "CRX-OPENFOAM-NATIVE-FALLBACK-001": {
+        "title": "OpenFOAM mesh decoding fell back",
+        "explanation": "A native OpenFOAM mesh component was binary, malformed, directive-bearing, truncated or otherwise unsupported by the bounded ASCII reader.",
+        "action": "Review the source file and parser attempt. Use a trusted optional backend for binary data or preserve the metadata-only result.",
+    },
+    "CRX-OPENFOAM-FIELD-FALLBACK-001": {
+        "title": "OpenFOAM field values were not decoded",
+        "explanation": "The field header could be inspected, but internal values were binary, directive-bearing, malformed or unsupported.",
+        "action": "Do not treat the field as numerically available. Review the attempt ledger or use a trusted reader that explicitly supports the field encoding.",
+    },
 }
 
 
