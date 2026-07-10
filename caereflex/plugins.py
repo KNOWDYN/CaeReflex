@@ -21,6 +21,7 @@ from caereflex.contracts import (
 
 PLUGIN_GROUP = "caereflex.adapters"
 _TIME_RE = re.compile(r"^(?:0|[1-9]\d*)(?:\.\d+)?$")
+_GMSH_SUFFIXES = {".geo", ".msh", ".step", ".stp", ".iges", ".igs", ".brep"}
 
 
 @dataclass(frozen=True)
@@ -61,15 +62,33 @@ class BuiltinAdapterPlugin:
                 first = parts[0]
                 if first in {"system", "constant"} or _TIME_RE.match(first):
                     paths.append(entry.path)
-            paths = paths[: budget.max_files]
             return InspectionPlan(
                 plugin_id=self.plugin_id,
                 profile=profile,
-                selected_paths=paths,
+                selected_paths=paths[: budget.max_files],
                 budget=budget,
                 backend_candidates=["openfoam.native", "core.manifest-audit"],
                 operation="native_openfoam_inspection",
                 metadata={"reader_policy": "ascii-native-with-metadata-fallback"},
+            )
+        if self.plugin_id == "gmsh":
+            paths = [
+                entry.path
+                for entry in manifest.entries
+                if not entry.is_dir and PurePosixPath(entry.path).suffix.lower() in _GMSH_SUFFIXES
+            ]
+            return InspectionPlan(
+                plugin_id=self.plugin_id,
+                profile=profile,
+                selected_paths=paths[: budget.max_files],
+                budget=budget,
+                backend_candidates=["gmsh.native", "core.manifest-audit"],
+                operation="native_gmsh_inspection",
+                metadata={
+                    "reader_policy": "meshio-first-core-ascii-fallback",
+                    "geo_policy": "declaration-only-never-execute",
+                    "cad_api_policy": "explicit-opt-in-no-mesh-generation",
+                },
             )
         paths = [
             entry.path
@@ -82,20 +101,26 @@ class BuiltinAdapterPlugin:
 _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
     BuiltinAdapterPlugin(
         plugin_id="gmsh",
-        plugin_version="1.0.0",
+        plugin_version="1.2.0",
         _capabilities=AdapterCapabilities(
             plugin_id="gmsh",
-            plugin_version="1.0.0",
-            formats=["gmsh-geo", "gmsh-msh", "step-detected", "iges-detected"],
-            geometry_support="declaration-summary",
-            topology_support="optional-meshio-summary",
-            field_support="none",
-            units_support="none",
-            fallback_modes=["text-summary", "fingerprint-only"],
+            plugin_version="1.2.0",
+            formats=["gmsh-geo", "gmsh-msh", "step-detected", "iges-detected", "brep-detected"],
+            geometry_support="safe-geo-declarations-and-optional-explicit-gmsh-api",
+            topology_support="meshio-first-and-core-ascii-msh-2x-4x",
+            field_support="node-data-element-data-and-meshio-point-cell-data",
+            time_series_support=True,
+            units_support="coordinate-and-field-units-unresolved-unless-supplied",
+            fallback_modes=[
+                "meshio",
+                "core-ascii-msh",
+                "geo-declaration-summary",
+                "cad-fingerprint-only",
+            ],
             optional_dependencies=["meshio", "gmsh"],
             licence="CaeReflex core; optional backend licences vary",
         ),
-        format_hints=frozenset({"gmsh-geo", "gmsh-msh", "step", "iges"}),
+        format_hints=frozenset({"gmsh-geo", "gmsh-msh", "step", "iges", "brep"}),
         case_hints=frozenset({"gmsh"}),
     ),
     BuiltinAdapterPlugin(
