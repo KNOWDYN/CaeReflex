@@ -149,6 +149,7 @@ class ResultFieldRecord(BaseModel):
     field_type: FieldType = FieldType.unknown
     components: int | None = None
     statistics: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
 
 class LiteratureEvidenceRecord(BaseModel):
@@ -232,6 +233,7 @@ class ReflexCase(BaseModel):
     case_manifest: dict[str, Any] | None = None
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
     quantity_evidence: list[dict[str, Any]] = Field(default_factory=list)
+    dimensional_checks: list[dict[str, Any]] = Field(default_factory=list)
     array_references: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 

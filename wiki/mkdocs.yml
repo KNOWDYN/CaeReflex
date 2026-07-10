@@ -25,6 +25,7 @@ nav:
       - Install: user-guide/install.md
       - Quickstart: user-guide/quickstart.md
       - Examples: user-guide/examples.md
+      - Dimensions and Units: user-guide/dimensions-and-units.md
       - Safe Use Policy: user-guide/safe-use-policy.md
   - Learning Projects:
       - Overview: learning/index.md

@@ -1,9 +1,12 @@
 # Quickstart
 
-Check the installation and catalog a case before deep inspection:
+Check the installation, units backend and case manifest before deep inspection:
 
 ```bash
 caereflex doctor
+caereflex units parse "25 degC" --json
+caereflex units convert 1 bar Pa --json
+caereflex units check "m/s" velocity --name U --json
 caereflex scan examples/openfoam_cavity_minimal --out manifest.json
 caereflex adapters probe examples/openfoam_cavity_minimal
 ```
@@ -20,6 +23,8 @@ caereflex inspect examples/openfoam_cavity_minimal \
   --report case_report.md
 ```
 
+For the bundled OpenFOAM case, inspect `quantity_evidence`, `dimensional_checks`, and `units_summary`. The expected semantic reads include velocity `U`, incompressible kinematic pressure `p`, and kinematic viscosity `nu`. A successful dimensional check establishes compatibility only; it does not validate the model or result.
+
 Mock CrossRef path:
 
 ```bash
@@ -29,4 +34,4 @@ caereflex crossref attach examples/crossref_context/sample_case.json \
 caereflex export bibtex caereflex.with_literature.json --out references.bib
 ```
 
-See `docs/GATES_1_3_FOUNDATION.md`, `docs/CLI_FOUNDATION.md`, and `docs/ADAPTER_PLUGIN_CONTRACT.md` for the new contracts, catalog mode, and plugin boundary.
+See `docs/GATES_1_3_FOUNDATION.md`, `docs/GATE_4_DIMENSIONS_UNITS.md`, `docs/CLI_FOUNDATION.md`, and `docs/ADAPTER_PLUGIN_CONTRACT.md` for the architecture and safety boundaries.

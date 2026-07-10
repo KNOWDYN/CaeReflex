@@ -26,6 +26,7 @@ dependencies = [
   "pyyaml>=6,<7",
   "bibtexparser>=1.4,<2",
   "fsspec>=2024.6,<2027",
+  "pint>=0.24,<1",
 ]
 
 [project.optional-dependencies]

@@ -72,19 +72,19 @@ _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
     ),
     BuiltinAdapterPlugin(
         plugin_id="openfoam",
-        plugin_version="1.0.0",
+        plugin_version="1.1.0",
         _capabilities=AdapterCapabilities(
             plugin_id="openfoam",
-            plugin_version="1.0.0",
+            plugin_version="1.1.0",
             formats=["openfoam-case"],
             geometry_support="case-inventory",
             topology_support="boundary-summary",
-            field_support="header-and-lightweight-text",
+            field_support="class-header-dimensions-and-lightweight-text",
             time_series_support=False,
-            units_support="raw-dimension-string",
-            fallback_modes=["forensic-text"],
+            units_support="seven-component-dimension-vector-and-Pint-validation",
+            fallback_modes=["structured-dimension-evidence", "raw-text-with-diagnostic", "forensic-text"],
             optional_dependencies=[],
-            licence="CaeReflex Research Source Licence",
+            licence="CaeReflex Research Source Licence; Pint is BSD-licensed core dependency",
         ),
         format_hints=frozenset({"openfoam-case", "openfoam-dictionary", "openfoam-field"}),
         case_hints=frozenset({"openfoam"}),
@@ -118,8 +118,8 @@ def builtin_plugins() -> list[BuiltinAdapterPlugin]:
 def external_plugins() -> list[AdapterPlugin]:
     plugins: list[AdapterPlugin] = []
     try:
-        eps = metadata.entry_points()
-        selected = eps.select(group=PLUGIN_GROUP) if hasattr(eps, "select") else eps.get(PLUGIN_GROUP, [])
+        entry_points = metadata.entry_points()
+        selected = entry_points.select(group=PLUGIN_GROUP) if hasattr(entry_points, "select") else entry_points.get(PLUGIN_GROUP, [])
     except Exception:
         return plugins
     for entry_point in selected:
