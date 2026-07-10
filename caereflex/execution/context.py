@@ -112,6 +112,7 @@ class ExecutionContext:
         coordinate_frame_ref: str | None = None,
         time_index: str | float | int | None = None,
         byte_order: str = "little",
+        backend_version: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> ArrayRef:
         ref = self.array_service.register_numeric(
@@ -127,7 +128,7 @@ class ExecutionContext:
             time_index=time_index,
             byte_order=byte_order,
             backend=self.request.backend_id,
-            backend_version=None,
+            backend_version=backend_version,
             metadata=metadata,
         )
         self.arrays.append(ref)

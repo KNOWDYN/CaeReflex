@@ -87,14 +87,17 @@ def _run_deep_execution(
         plan = InspectionPlan(plugin_id=adapter, profile=profile, budget=execution_budget)
     if not plan.selected_paths:
         plan.selected_paths = [entry.path for entry in manifest.entries if not entry.is_dir][: execution_budget.max_files]
-    plan.backend_candidates = list(dict.fromkeys([*plan.backend_candidates, "core.manifest-audit"]))
-    plan.metadata["gate_5a_native_backend_available"] = False
+
+    backend_id = "openfoam.native" if adapter in {"openfoam", "openfoam_adapter"} else "core.manifest-audit"
+    plan.backend_candidates = list(dict.fromkeys([*plan.backend_candidates, backend_id, "core.manifest-audit"]))
+    plan.metadata["native_backend_available"] = backend_id != "core.manifest-audit"
+    plan.metadata["selected_backend"] = backend_id
 
     try:
         result = execute_inspection_plan(
             manifest,
             plan,
-            backend_id="core.manifest-audit",
+            backend_id=backend_id,
             source_root=_manifest_source_root(manifest, inspected_path),
             state_root=config.execution_state_dir,
             policy=ExecutionPolicy(
@@ -117,6 +120,9 @@ def _run_deep_execution(
         return
 
     case.metadata["inspection_execution"] = result.model_dump(mode="json")
+    backend_result = result.metadata.get("backend_result") if isinstance(result.metadata, dict) else None
+    if isinstance(backend_result, dict) and isinstance(backend_result.get("summary"), dict):
+        case.metadata["native_openfoam"] = backend_result["summary"]
     case.array_references.extend(item.model_dump(mode="json") for item in result.arrays)
     case.diagnostics.extend(item.model_dump(mode="json") for item in result.diagnostics)
     case.provenance.append(
