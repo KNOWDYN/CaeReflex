@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 
 from caereflex.contracts import CaseManifest, ExecutionPolicy, InspectionBudget, InspectionPlan, InspectionProfile
+from caereflex.core.config import CaeReflexConfig
 from caereflex.execution import InspectionExecutionError, execute_inspection_plan, list_execution_backends
 
 execution_app = typer.Typer(help="Run and inspect bounded deep-inspection backends.", no_args_is_help=True)
@@ -27,12 +28,6 @@ def backends(json_mode: bool = typer.Option(False, "--json")) -> None:
     for row in rows:
         table.add_row(row["backend_id"], row["backend_version"], row["source"])
     console.print(table)
-
-
-def _default_state_root(source_root: Path) -> Path:
-    resolved = source_root.expanduser().resolve()
-    normalized_source = resolved.parent if resolved.is_file() else resolved
-    return normalized_source.parent / ".caereflex"
 
 
 @execution_app.command("run")
@@ -72,7 +67,7 @@ def run_execution(
             plan,
             backend_id=backend,
             source_root=source_root,
-            state_root=state_root or _default_state_root(source_root),
+            state_root=state_root or CaeReflexConfig().execution_state_dir,
             backend_options=backend_options,
             policy=ExecutionPolicy(),
         )
