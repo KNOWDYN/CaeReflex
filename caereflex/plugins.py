@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib import metadata
+from pathlib import PurePosixPath
+import re
 from typing import Iterable
 
 from caereflex.contracts import (
@@ -18,6 +20,7 @@ from caereflex.contracts import (
 )
 
 PLUGIN_GROUP = "caereflex.adapters"
+_TIME_RE = re.compile(r"^(?:0|[1-9]\d*)(?:\.\d+)?$")
 
 
 @dataclass(frozen=True)
@@ -47,7 +50,32 @@ class BuiltinAdapterPlugin:
         profile: InspectionProfile,
         budget: InspectionBudget,
     ) -> InspectionPlan:
-        paths = [entry.path for entry in manifest.entries if entry.format_hint in self.format_hints or entry.case_hint in self.case_hints]
+        if self.plugin_id == "openfoam":
+            paths: list[str] = []
+            for entry in manifest.entries:
+                if entry.is_dir:
+                    continue
+                parts = PurePosixPath(entry.path).parts
+                if not parts:
+                    continue
+                first = parts[0]
+                if first in {"system", "constant"} or _TIME_RE.match(first):
+                    paths.append(entry.path)
+            paths = paths[: budget.max_files]
+            return InspectionPlan(
+                plugin_id=self.plugin_id,
+                profile=profile,
+                selected_paths=paths,
+                budget=budget,
+                backend_candidates=["openfoam.native", "core.manifest-audit"],
+                operation="native_openfoam_inspection",
+                metadata={"reader_policy": "ascii-native-with-metadata-fallback"},
+            )
+        paths = [
+            entry.path
+            for entry in manifest.entries
+            if entry.format_hint in self.format_hints or entry.case_hint in self.case_hints
+        ]
         return InspectionPlan(plugin_id=self.plugin_id, profile=profile, selected_paths=paths, budget=budget)
 
 
@@ -72,17 +100,22 @@ _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
     ),
     BuiltinAdapterPlugin(
         plugin_id="openfoam",
-        plugin_version="1.1.0",
+        plugin_version="1.2.0",
         _capabilities=AdapterCapabilities(
             plugin_id="openfoam",
-            plugin_version="1.1.0",
-            formats=["openfoam-case"],
-            geometry_support="case-inventory",
-            topology_support="boundary-summary",
-            field_support="class-header-dimensions-and-lightweight-text",
-            time_series_support=False,
+            plugin_version="1.2.0",
+            formats=["openfoam-case", "openfoam-polyMesh", "openfoam-field"],
+            geometry_support="native-ascii-points-and-bounds",
+            topology_support="native-ascii-faces-owner-neighbour-boundary",
+            field_support="native-ascii-uniform-and-nonuniform-internal-fields",
+            time_series_support=True,
             units_support="seven-component-dimension-vector-and-Pint-validation",
-            fallback_modes=["structured-dimension-evidence", "raw-text-with-diagnostic", "forensic-text"],
+            fallback_modes=[
+                "field-header-and-dimensions",
+                "structured-metadata",
+                "raw-text-with-diagnostic",
+                "fingerprint-only",
+            ],
             optional_dependencies=[],
             licence="CaeReflex Research Source Licence; Pint is BSD-licensed core dependency",
         ),
