@@ -10,33 +10,62 @@ from caereflex.execution import execute_inspection_plan
 from caereflex.plugins import get_adapter_plugin
 
 
+MESHIO_MSH = """$MeshFormat
+2.2 0 8
+$EndMeshFormat
+$PhysicalNames
+1
+2 2 \"fluid\"
+$EndPhysicalNames
+$Nodes
+4
+1 0 0 0
+2 1 0 0
+3 1 1 0
+4 0 1 0
+$EndNodes
+$Elements
+2
+1 2 2 2 1 1 2 3
+2 2 2 2 1 1 3 4
+$EndElements
+$NodeData
+1
+\"temperature\"
+1
+0.0
+3
+0
+1
+4
+1 10.0
+2 20.0
+3 30.0
+4 40.0
+$EndNodeData
+$ElementData
+1
+\"quality\"
+1
+0.0
+3
+0
+1
+2
+1 0.8
+2 0.9
+$EndElementData
+"""
+
+
 @pytest.mark.optional_mesh
 def test_optional_meshio_path_decodes_gmsh_mesh_and_data(tmp_path: Path):
-    meshio = pytest.importorskip("meshio")
-    np = pytest.importorskip("numpy")
+    pytest.importorskip("meshio")
 
     source = tmp_path / "source"
     source.mkdir()
     mesh_path = source / "meshio-square.msh"
-    mesh = meshio.Mesh(
-        points=np.array(
-            [
-                [0.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [1.0, 1.0, 0.0],
-                [0.0, 1.0, 0.0],
-            ]
-        ),
-        cells=[("triangle", np.array([[0, 1, 2], [0, 2, 3]], dtype=int))],
-        point_data={"temperature": np.array([10.0, 20.0, 30.0, 40.0])},
-        cell_data={
-            "gmsh:physical": [np.array([2, 2], dtype=int)],
-            "gmsh:geometrical": [np.array([1, 1], dtype=int)],
-            "quality": [np.array([0.8, 0.9])],
-        },
-        field_data={"fluid": np.array([2, 2], dtype=int)},
-    )
-    meshio.write(mesh_path, mesh, file_format="gmsh22", binary=False)
+    mesh_path.write_text(MESHIO_MSH, encoding="utf-8")
 
     manifest = CaseManifest(
         manifest_id="manifest_gmsh_meshio_optional",
