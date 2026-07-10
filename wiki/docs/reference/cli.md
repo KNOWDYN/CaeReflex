@@ -5,9 +5,9 @@ Current CLI command surface:
 | Command | Purpose |
 | --- | --- |
 | `version` | Print the package version. |
-| `doctor` | Report the Python environment, core dependencies, units backend, execution runtime, contract version, and adapter capabilities. |
+| `doctor` | Report the Python environment, units backend, execution backends, contract version and adapter capabilities. |
 | `scan` | Build a bounded metadata-only case manifest without materialising large mesh or field arrays. |
-| `inspect` | Discover, inspect and export a case; `deep` and `forensic` profiles also invoke the Gate 5A execution runtime. |
+| `inspect` | Discover and inspect a case; deep OpenFOAM inspection selects the native backend when a complete `polyMesh` is present. |
 | `inspect-gmsh` | Deprecated compatibility alias for Gmsh inspection. |
 | `inspect-openfoam` | Deprecated compatibility alias for OpenFOAM inspection. |
 | `inspect-vtk` | Deprecated compatibility alias for VTK inspection. |
@@ -19,12 +19,12 @@ Current CLI command surface:
 | `jobs list` | List persistent local execution-job records. |
 | `jobs show` | Show one execution-job record. |
 | `arrays list` | List registered lazy arrays. |
-| `arrays describe` | Show ArrayRef metadata and verified artefact size. |
+| `arrays describe` | Show `ArrayRef` metadata and verified artefact size. |
 | `arrays sample` | Return a deterministic bounded sample. |
 | `arrays slice` | Return a bounded flat slice. |
 | `arrays reduce` | Run a streaming min, max, mean, sum or count reduction. |
 | `adapters list` | List installed adapter capabilities. |
-| `adapters info` | Show the declared capabilities, dependencies, fallbacks, and licence metadata for one adapter. |
+| `adapters info` | Show the declared capabilities, dependencies, fallbacks and licence metadata for one adapter. |
 | `adapters probe` | Build a manifest and report which installed adapters match it. |
 | `schema show` | Print the generated ReflexCase JSON Schema. |
 | `schema validate` | Validate a stored ReflexCase and report its schema and contract versions. |
@@ -52,37 +52,26 @@ caereflex units check "m/s" velocity --name U --json
 
 `units check` compares base dimensions, not names. A conflicting result exits with code `6`, emits `CRX-UNITS-DIMENSION-MISMATCH-001`, and blocks automated interpretation until a human reviews the source. A compatible result confirms dimensional compatibility only; it does not prove that the variable has the intended physical role.
 
-OpenFOAM dimensions are represented in the order `[mass length time temperature substance current luminosity]`. CaeReflex preserves the original vector and derives a canonical SI unit representation. That representation does not erase the distinction between pressure and incompressible kinematic pressure.
+OpenFOAM dimensions use `[mass length time temperature substance current luminosity]`. CaeReflex preserves the original vector and derives a canonical SI representation without erasing distinctions such as pressure versus incompressible kinematic pressure.
 
-## Bounded discovery and safe execution
-
-Use catalog mode before deep inspection:
+## Bounded discovery and execution
 
 ```bash
 caereflex doctor
-caereflex scan examples/openfoam_cavity_minimal --out manifest.json
-caereflex adapters probe examples/openfoam_cavity_minimal
+caereflex scan examples/openfoam_cavity_native --out manifest.json
+caereflex adapters probe examples/openfoam_cavity_native
 caereflex execution backends
 ```
 
-`scan` accepts resource limits including `--max-files`, `--max-depth`, `--max-bytes-read`, and `--max-wall-time`. Reaching a limit produces an explicit diagnostic and a truncated manifest; it is never presented as a complete inspection.
+`scan` accepts `--max-files`, `--max-depth`, `--max-bytes-read` and `--max-wall-time`. Reaching a limit produces an explicit diagnostic and a truncated manifest.
 
-Run the Gate 5A audit backend directly:
+The worker uses parent-enforced wall time, bounded serialised output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
 
-```bash
-caereflex execution run manifest.json \
-  --source-root examples/openfoam_cavity_minimal \
-  --backend core.manifest-audit \
-  --json
-```
-
-The worker runs in a subprocess with parent-enforced wall time, bounded serialized output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
-
-## Inspection with manifest, dimensions and execution evidence
+## Native OpenFOAM inspection
 
 ```bash
-caereflex inspect examples/openfoam_cavity_minimal \
-  --adapter auto \
+caereflex inspect examples/openfoam_cavity_native \
+  --adapter openfoam \
   --profile deep \
   --manifest-out manifest.json \
   --out caereflex.json \
@@ -90,7 +79,27 @@ caereflex inspect examples/openfoam_cavity_minimal \
   --report case_report.md
 ```
 
-In `2.0.0a1`, a deep profile records the safe `core.manifest-audit` execution. Native OpenFOAM, Gmsh and VTK readers remain deferred. The output includes `quantity_evidence`, `dimensional_checks`, execution metadata, parser attempts and diagnostics.
+A complete ASCII `polyMesh` selects `openfoam.native`. The output adds:
+
+- `metadata.openfoam_native.mesh`;
+- `metadata.openfoam_native.times`;
+- `metadata.openfoam_native.field_availability`;
+- `metadata.openfoam_native.fields`;
+- native `ArrayRef` records;
+- quantity evidence and dimensional checks;
+- native and fallback parser attempts.
+
+Incomplete OpenFOAM cases continue to use `core.manifest-audit`. Binary payloads and executable or expandable constructs are not guessed or executed; they produce explicit diagnostics and fallbacks.
+
+The native backend can also be selected for a direct execution command when the manifest includes all required files:
+
+```bash
+caereflex execution run manifest.json \
+  --source-root examples/openfoam_cavity_native \
+  --backend openfoam.native \
+  --plugin-id openfoam \
+  --json
+```
 
 ## Jobs and arrays
 
@@ -104,14 +113,14 @@ caereflex arrays slice ARRAY_ID --start 0 --stop 100 --json
 caereflex arrays reduce ARRAY_ID --operation mean --json
 ```
 
-Array queries are allowed only when declared by the `ArrayRef` and are capped by a result-element limit. Complete industrial arrays are never emitted into ReflexCase JSON or an LLM context.
+Array queries are allowed only when declared by the `ArrayRef` and are capped by a result-element limit. Coordinates, connectivity and internal fields remain outside ReflexCase JSON.
 
 ## Machine-readable output
 
-Commands that expose `--json` emit JSON on standard output. Human-readable status text is suppressed in JSON mode so scripts can parse the result directly.
+Commands exposing `--json` emit JSON on standard output. Human-readable status text is suppressed so scripts can parse the result directly.
 
 ## Compatibility
 
-The `inspect-gmsh`, `inspect-openfoam`, and `inspect-vtk` commands remain available during the migration to the unified `inspect --adapter ...` interface. Existing schema-v1 ReflexCase payloads remain valid because Gate 5A contract extensions are additive.
+The `inspect-gmsh`, `inspect-openfoam` and `inspect-vtk` commands remain available during migration to the unified interface. Existing schema-v1 ReflexCase payloads remain valid because Gate 5B uses additive metadata and existing contracts.
 
-Successful command execution does not establish simulation validity, convergence, mesh adequacy, certification or design safety.
+Successful native decoding does not establish simulation validity, convergence, mesh adequacy, physical-model suitability, certification or design safety.
