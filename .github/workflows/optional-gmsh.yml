@@ -31,7 +31,24 @@ jobs:
         run: python -m compileall -q caereflex
 
       - name: Run optional meshio tests
-        run: python -m pytest -q --tb=short -m optional_mesh tests/test_gate5c_gmsh_optional_meshio.py
+        id: meshio-tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_mesh tests/test_gate5c_gmsh_optional_meshio.py \
+            2>&1 | tee optional-meshio.log
+
+      - name: Upload meshio report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-meshio
+          path: optional-meshio.log
+          if-no-files-found: error
+
+      - name: Fail when meshio tests fail
+        if: steps.meshio-tests.outcome == 'failure'
+        run: exit 1
 
   gmsh-api:
     name: Gmsh API reader
@@ -60,4 +77,21 @@ jobs:
         run: python -m compileall -q caereflex
 
       - name: Run optional Gmsh API tests
-        run: python -m pytest -q --tb=short -m optional_gmsh tests/test_gate5c_gmsh_optional_api.py
+        id: gmsh-tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_gmsh tests/test_gate5c_gmsh_optional_api.py \
+            2>&1 | tee optional-gmsh-api.log
+
+      - name: Upload Gmsh API report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-gmsh-api
+          path: optional-gmsh-api.log
+          if-no-files-found: error
+
+      - name: Fail when Gmsh API tests fail
+        if: steps.gmsh-tests.outcome == 'failure'
+        run: exit 1
