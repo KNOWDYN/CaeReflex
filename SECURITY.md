@@ -8,11 +8,12 @@ CaeReflex is source-available software owned and licensed by **KNOWDYN LTD (UK)*
 
 | Version | Security support | Status |
 | --- | ---: | --- |
-| `2.0.0a1` | Supported | Active 2.x alpha line |
+| `2.0.0a2` | Supported | Active 2.x alpha line |
+| `2.0.0a1` | Critical fixes only | Superseded Gate 5A foundation |
 | `1.0.0` | Critical fixes only | Maintenance during the alpha transition |
 | Earlier versions | Not supported | Upgrade required |
 
-The `2.0.0a1` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
+The `2.0.0a2` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
 
 ## Reporting security issues
 
@@ -23,7 +24,7 @@ Report suspected vulnerabilities privately to [ipcontrol@knowdyn.co.uk](mailto:i
 3. installation method and optional dependencies;
 4. command, REST endpoint or execution backend used;
 5. steps to reproduce, expected behaviour and observed behaviour;
-6. whether the issue affects CLI, REST, CrossRef, discovery, deep execution, artefacts, arrays or exports;
+6. whether the issue affects CLI, REST, CrossRef, discovery, deep execution, native OpenFOAM decoding, artefacts, arrays or exports;
 7. safe minimal fixtures, logs or tracebacks;
 8. whether the issue is already public.
 
@@ -36,11 +37,12 @@ Security issues include:
 - path traversal or unrestricted filesystem access;
 - exposure of absolute local paths, secrets or credentials;
 - unintended shell, solver, mesher or source-code execution;
+- unintended expansion of OpenFOAM includes, substitutions or code streams;
 - unintended mutation of inspected engineering sources;
 - unsafe REST exposure or missing API-key enforcement outside localhost;
 - hidden network calls during ordinary inspection;
 - raw simulation data being sent to external services;
-- malformed or oversized files escaping configured limits;
+- malformed, compressed or oversized files escaping configured limits;
 - native-reader crashes terminating the parent service;
 - content-addressed artefact integrity failures;
 - array queries bypassing operation or output limits;
@@ -89,7 +91,7 @@ Deep inspection runs through a dedicated subprocess worker. The default runtime 
 - Python-level shell and child-process guards when subprocess access is disabled;
 - POSIX address-space and CPU limits where supported;
 - parent-enforced wall-time termination;
-- bounded serialized result size;
+- bounded serialised result size;
 - selected-path containment;
 - before-and-after source snapshots;
 - persistent job, result and parser-attempt records;
@@ -99,7 +101,31 @@ Deep inspection runs through a dedicated subprocess worker. The default runtime 
 
 The default worker is **not a complete operating-system sandbox**. Native libraries can potentially bypass Python-level socket, process or filesystem guards. POSIX resource limits are unavailable or different on some platforms. Source snapshots detect mutation but cannot automatically restore a changed source.
 
-Hostile, proprietary or safety-critical inputs may require stronger external isolation such as a container, virtual machine, restricted operating-system account or institutionally managed worker. Future native backends must declare their isolation requirements honestly.
+Hostile, proprietary or safety-critical inputs may require stronger external isolation such as a container, virtual machine, restricted operating-system account or institutionally managed worker. Native backends must declare their isolation requirements honestly.
+
+## Gate 5B OpenFOAM native reader
+
+`openfoam.native` decodes native OpenFOAM ASCII mesh and field evidence inside the Gate 5A worker. It is a parser, not an OpenFOAM runtime.
+
+The backend may read only files selected by the manifest-backed inspection plan. It does not import OpenFOAM libraries, invoke a solver, run a utility or call a shell command.
+
+It deliberately does not expand or execute:
+
+- `#include`, `#includeEtc` or `#includeIfPresent`;
+- `$name` or `${name}` substitutions;
+- `#calc`, `#eval` or `#codeStream`;
+- coded boundary conditions;
+- `dynamicCode`, code options or code libraries;
+- dynamic-library declarations;
+- environment-dependent dictionary generation.
+
+Those constructs are recorded as literal source evidence with `CRX-OF-NATIVE-UNSAFE-001` and a partial result. A user must produce a separate trusted explicit case copy if expanded values are required.
+
+The native reader supports bounded ASCII payloads. A file declaring `format binary` or containing NUL bytes is rejected with `CRX-OF-NATIVE-BINARY-001`. CaeReflex does not guess OpenFOAM label width, scalar width, endian order, compact-list encoding or architecture metadata.
+
+Gzip decoding is bounded by the inspection byte budget. Invalid or expansion-heavy gzip input is rejected. Decompressed content remains subject to the same parser and non-execution controls.
+
+Malformed face labels, owner/neighbour lengths and patch ranges produce diagnostics or a structured fallback. They must not terminate the parent CLI or service.
 
 ## Artefact and lazy-array security
 
@@ -113,6 +139,8 @@ Generated heavy payloads are stored outside ReflexCase JSON under `.caereflex/ar
 - maximum returned element counts;
 - streaming reductions rather than full JSON materialisation.
 
+OpenFOAM coordinates, connectivity, owner/neighbour labels and decoded internal fields are stored behind these references. Complete industrial arrays are not inserted into ReflexCase or LLM context payloads.
+
 Users should not manually edit `.caereflex` state. Preserve logs and recreate state from trusted sources after an integrity failure.
 
 ## Solver, shell and mutation policy
@@ -120,6 +148,7 @@ Users should not manually edit `.caereflex` state. Preserve logs and recreate st
 CaeReflex does not expose commands or endpoints for:
 
 - OpenFOAM execution;
+- OpenFOAM dictionary expansion;
 - Gmsh meshing execution;
 - ParaView launch or automation;
 - general shell execution;
@@ -128,17 +157,19 @@ CaeReflex does not expose commands or endpoints for:
 - design optimisation;
 - autonomous engineering decisions.
 
-Any behaviour that enables unintended execution or mutation should be reported as a security issue.
+Any behaviour that enables unintended execution, expansion or mutation should be reported as a security issue.
 
 ## CrossRef privacy and network use
 
-CrossRef is contacted only when explicitly requested through a CrossRef command, action or `--attach-crossref` option. Ordinary discovery, inspection, deep execution, array queries and exports must not make hidden CrossRef calls.
+CrossRef is contacted only when explicitly requested through a CrossRef command, action or `--attach-crossref` option. Ordinary discovery, inspection, deep execution, native OpenFOAM reading, array queries and exports must not make hidden CrossRef calls.
 
-Only generated/user-supplied query strings and API parameters are sent. Raw simulation files, full case folders, proprietary artefacts, secrets and tokens must not be transmitted. CrossRef outputs are metadata and available-abstract context, not validation evidence.
+Only generated or user-supplied query strings and API parameters are sent. Raw simulation files, full case folders, proprietary artefacts, secrets and tokens must not be transmitted. CrossRef outputs are metadata and available-abstract context, not validation evidence.
 
 ## Agent-facing output safety
 
 Agent outputs must preserve distinctions among extracted, inferred, generated, user-supplied and external metadata. CaeReflex does not validate simulations, prove convergence, assess mesh adequacy, certify engineering results or establish design safety.
+
+Native mesh counts, field arrays and dimensional checks are evidence about source representation. They do not establish numerical correctness, physical suitability or successful solver execution.
 
 A generated output exposing secrets, unrestricted local paths, excessive raw arrays or misleading engineering claims should be treated as a security or safety issue.
 
@@ -146,15 +177,21 @@ A generated output exposing secrets, unrestricted local paths, excessive raw arr
 
 Do not place credentials, private keys, tokens, passwords or commercial licence secrets inside inspected workspaces. CaeReflex is not a secrets scanner. API keys must not be committed to repositories, examples, reports or generated outputs.
 
+OpenFOAM dictionaries may reference environment variables or external include paths. Gate 5B records those references but does not resolve them.
+
 ## Dependency security and licensing
 
-The core install remains intentionally smaller than native-reader installations. Gmsh, meshio, VTK and PyVista are optional and governed by their own security and licence terms. Native readers introduced after Gate 5A must remain separately testable and installable.
+The Gate 5B OpenFOAM ASCII reader uses the Python standard library and existing CaeReflex core dependencies. It does not require an OpenFOAM installation.
+
+Gmsh, meshio, VTK and PyVista remain optional and governed by their own security and licence terms. Later native readers must remain separately testable and installable.
 
 Users are responsible for maintaining a secure Python environment and updating third-party dependencies according to their own policies. See `THIRD_PARTY_NOTICES.md` where applicable.
 
 ## Example and test data
 
 Bundled fixtures must be small, offline, reproducible and legally clean. Core tests must not require live CrossRef access, solver installation, Gmsh, ParaView, large downloads or proprietary data.
+
+The Gate 5B cavity fixture is synthetic and is not a convergence, validation or mesh-quality benchmark.
 
 Fault-injection execution backends are disabled unless `CAEREFLEX_ENABLE_TEST_BACKENDS=1` is explicitly set in a test environment.
 
@@ -165,9 +202,12 @@ CaeReflex is not:
 - a complete sandbox or container runtime;
 - a malware or secrets scanner;
 - a secure multi-tenant platform;
+- an OpenFOAM dictionary preprocessor;
 - an engineering validator or certification system;
 - guaranteed to parse every grammar feature or malformed native file;
 - a replacement for qualified engineering judgement.
+
+Gate 5B does not decode OpenFOAM binary payloads, reconstruct decomposed processor domains, derive mesh-quality metrics or execute solvers.
 
 Generated evidence is only as reliable as the inspected source, backend, declared fallback and available metadata. Commercial, institutional, cloud or safety-critical deployments require their own security and engineering review.
 
