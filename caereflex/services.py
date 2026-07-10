@@ -3,21 +3,33 @@ from importlib import util as importlib_util
 from pathlib import Path
 import platform
 from typing import Any
+from urllib.parse import unquote, urlparse
 
-from caereflex.contracts import CONTRACT_VERSION, CaseManifest, InspectionBudget, InspectionProfile
+from caereflex.contracts import (
+    CONTRACT_VERSION,
+    CaseManifest,
+    DiagnosticEvent,
+    DiagnosticSeverity,
+    ExecutionPolicy,
+    ExecutionStatus,
+    InspectionBudget,
+    InspectionPlan,
+    InspectionProfile,
+)
 from caereflex.core.config import CaeReflexConfig
-from caereflex.core.models import ReflexCase
+from caereflex.core.models import InspectionFlag, InspectionStatus, ProvenanceRecord, ReflexCase, Severity
 from caereflex.core.errors import UnsupportedFormatError
 from caereflex.adapters.gmsh import GmshAdapter
 from caereflex.adapters.openfoam import OpenFOAMAdapter
 from caereflex.adapters.vtk import VTKAdapter
 from caereflex.discovery import CatalogStore, scan_case
 from caereflex.evidence.crossref import attach_crossref as _attach_crossref, search_crossref as _search_crossref
+from caereflex.execution import InspectionExecutionError, execute_inspection_plan, list_execution_backends
 from caereflex.exporters import (
     export_reflexcase_json, export_agent_context_json, export_agent_context_md,
     export_markdown_report, export_bibtex, load_reflexcase
 )
-from caereflex.plugins import adapter_capabilities, probe_manifest
+from caereflex.plugins import adapter_capabilities, get_adapter_plugin, probe_manifest
 from caereflex.version import __version__
 
 EXAMPLE_NAMES = ["gmsh_minimal", "openfoam_cavity_minimal", "vtk_minimal", "crossref_context", "agent_workflow"]
@@ -41,6 +53,93 @@ def scan_path(
         if use_cache:
             store.save(manifest)
     return manifest, diff
+
+
+def _manifest_source_root(manifest: CaseManifest, inspected_path: Path) -> Path:
+    if manifest.storage_protocol == "file":
+        parsed = urlparse(manifest.root_uri)
+        if parsed.scheme == "file":
+            return Path(unquote(parsed.path)).resolve()
+        if not parsed.scheme:
+            return Path(manifest.root_uri).expanduser().resolve()
+    return inspected_path.resolve() if inspected_path.is_dir() else inspected_path.parent.resolve()
+
+
+def _run_deep_execution(
+    case: ReflexCase,
+    manifest: CaseManifest,
+    adapter: str,
+    profile: InspectionProfile,
+    inspected_path: Path,
+    config: CaeReflexConfig,
+) -> None:
+    plugin = get_adapter_plugin(adapter)
+    execution_budget = InspectionBudget(
+        max_files=config.max_scan_files,
+        max_depth=config.max_scan_depth,
+        max_bytes_read=config.max_file_size_bytes,
+        max_wall_time_seconds=30.0,
+        max_array_elements_returned=config.max_array_elements_returned,
+    )
+    if plugin is not None:
+        plan = plugin.plan(manifest, profile, execution_budget)
+    else:
+        plan = InspectionPlan(plugin_id=adapter, profile=profile, budget=execution_budget)
+    if not plan.selected_paths:
+        plan.selected_paths = [entry.path for entry in manifest.entries if not entry.is_dir][: execution_budget.max_files]
+    plan.backend_candidates = list(dict.fromkeys([*plan.backend_candidates, "core.manifest-audit"]))
+    plan.metadata["gate_5a_native_backend_available"] = False
+
+    try:
+        result = execute_inspection_plan(
+            manifest,
+            plan,
+            backend_id="core.manifest-audit",
+            source_root=_manifest_source_root(manifest, inspected_path),
+            state_root=config.execution_state_dir,
+            policy=ExecutionPolicy(
+                max_memory_bytes=config.max_execution_memory_bytes,
+                max_result_bytes=config.max_execution_result_bytes,
+            ),
+        )
+    except InspectionExecutionError as exc:
+        diagnostic = DiagnosticEvent(
+            code="CRX-EXEC-START-001",
+            severity=DiagnosticSeverity.error,
+            message=f"Deep inspection could not be started: {exc}",
+            parser="caereflex.services",
+        )
+        case.diagnostics.append(diagnostic.model_dump(mode="json"))
+        case.inspection_flags.append(
+            InspectionFlag(severity=Severity.warning, category="deep_execution_failed", message=diagnostic.message)
+        )
+        case.inspection.status = InspectionStatus.partial_success
+        return
+
+    case.metadata["inspection_execution"] = result.model_dump(mode="json")
+    case.array_references.extend(item.model_dump(mode="json") for item in result.arrays)
+    case.diagnostics.extend(item.model_dump(mode="json") for item in result.diagnostics)
+    case.provenance.append(
+        ProvenanceRecord(
+            event="deep_inspection_execution_completed",
+            details={
+                "execution_id": result.execution_id,
+                "job_id": result.job_id,
+                "backend_id": result.backend_id,
+                "status": result.status,
+                "array_count": len(result.arrays),
+            },
+        )
+    )
+    if str(result.status) != ExecutionStatus.success.value:
+        case.inspection_flags.append(
+            InspectionFlag(
+                severity=Severity.warning,
+                category="deep_execution_degraded",
+                message=result.termination_reason or "Deep inspection execution did not complete successfully.",
+            )
+        )
+        case.inspection.status = InspectionStatus.partial_success
 
 
 def inspect_path(
@@ -86,6 +185,8 @@ def inspect_path(
             "limits_reached": manifest.limits_reached,
         }
         case.metadata["adapter_probe"] = [item.model_dump(mode="json") for item in probe_manifest(manifest)]
+        if profile in {InspectionProfile.deep, InspectionProfile.forensic}:
+            _run_deep_execution(case, manifest, adapter, profile, path_obj, config)
     if attach_crossref:
         case = _attach_crossref(case, **(crossref_kwargs or {}))
     return case
@@ -144,6 +245,13 @@ def doctor_report() -> dict[str, Any]:
         "platform": platform.platform(),
         "dependencies": dependencies,
         "units_backend": "Pint" if dependencies["pint"] else "unavailable",
+        "execution_runtime": {
+            "mode": "local-subprocess",
+            "default_network": "blocked-by-python-guard",
+            "default_child_processes": "blocked-by-python-guard",
+            "source_mutation": "detected-by-before-and-after-snapshot",
+            "backends": list_execution_backends(),
+        },
         "adapters": [item.model_dump(mode="json") for item in adapter_capabilities()],
     }
 
