@@ -11,7 +11,8 @@ import subprocess
 import time
 from typing import Any
 
-from caereflex.contracts import InspectionExecutionRequest
+from caereflex.contracts import AttemptOutcome, InspectionExecutionRequest, ParserAttempt
+from caereflex.core.provenance import utc_now_iso
 from caereflex.execution.context import ExecutionContext
 
 
@@ -65,6 +66,35 @@ class TestExecutionBackend:
         elif mode == "environment":
             key = str(request.backend_options.get("key", "CAEREFLEX_SECRET_FIXTURE"))
             return {"summary": {"key": key, "present": key in os.environ}}
+        elif mode == "fallback":
+            started = utc_now_iso()
+            context.record_attempt(
+                ParserAttempt(
+                    attempt_id="attempt_test_native",
+                    stage="native_decode",
+                    backend_id="test.native",
+                    backend_version="1.0",
+                    outcome=AttemptOutcome.failed,
+                    started_at=started,
+                    completed_at=utc_now_iso(),
+                    exception_type="FixtureDecodeError",
+                    exception_message="native fixture decoder rejected the input",
+                    fallback_to="test.structured",
+                    information_lost=["native_topology"],
+                )
+            )
+            context.record_attempt(
+                ParserAttempt(
+                    attempt_id="attempt_test_structured",
+                    stage="structured_fallback",
+                    backend_id="test.structured",
+                    backend_version="1.0",
+                    outcome=AttemptOutcome.success,
+                    started_at=utc_now_iso(),
+                    completed_at=utc_now_iso(),
+                )
+            )
+            return {"summary": {"fallback_used": "test.structured"}}
         elif mode == "emit_array":
             values = request.backend_options.get("values", [0.0, 1.0, 2.0, 3.0])
             shape = tuple(request.backend_options.get("shape", [len(values)]))
