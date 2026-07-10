@@ -1,6 +1,6 @@
 # Quickstart
 
-Check the installation, units backend, execution runtime and case manifest:
+Check the installation, units backend, execution runtime and native backend inventory:
 
 ```bash
 caereflex doctor
@@ -8,26 +8,17 @@ caereflex units parse "25 degC" --json
 caereflex units convert 1 bar Pa --json
 caereflex units check "m/s" velocity --name U --json
 caereflex execution backends
-caereflex scan examples/openfoam_cavity_minimal --out manifest.json
-caereflex adapters probe examples/openfoam_cavity_minimal
+caereflex scan examples/openfoam_cavity_native --out manifest.json
+caereflex adapters probe examples/openfoam_cavity_native
 ```
 
-Run the safe manifest-audit worker directly:
-
-```bash
-caereflex execution run manifest.json \
-  --source-root examples/openfoam_cavity_minimal \
-  --backend core.manifest-audit \
-  --json
-caereflex jobs list
-```
-
-Offline inspection path:
+Run the complete offline OpenFOAM native example:
 
 ```bash
 caereflex examples list
-caereflex examples run openfoam_cavity_minimal
-caereflex inspect examples/openfoam_cavity_minimal \
+caereflex examples run openfoam_cavity_native
+caereflex inspect examples/openfoam_cavity_native \
+  --adapter openfoam \
   --profile deep \
   --manifest-out manifest.json \
   --out caereflex.json \
@@ -35,15 +26,35 @@ caereflex inspect examples/openfoam_cavity_minimal \
   --report case_report.md
 ```
 
-For the bundled OpenFOAM case, inspect `quantity_evidence`, `dimensional_checks`, `units_summary`, and `metadata.inspection_execution`. The expected semantic reads include velocity `U`, incompressible kinematic pressure `p`, and kinematic viscosity `nu`.
+The deep result uses `openfoam.native` when all five required `polyMesh` files are present. Inspect:
 
-Gate 5A uses `core.manifest-audit`; it does not yet decode native OpenFOAM, Gmsh or VTK arrays. Later readers will register heavy values behind `ArrayRef` handles. When an array is available:
+- `metadata.openfoam_native.mesh` for counts, bounds, patches and topology-array IDs;
+- `metadata.openfoam_native.times` and `field_availability`;
+- `metadata.openfoam_native.fields` for field/time records;
+- `quantity_evidence` and `dimensional_checks` for `U`, `p` and `nu`;
+- `metadata.inspection_execution.attempts` for native and fallback stages.
+
+Query lazy values without embedding complete arrays in JSON:
 
 ```bash
+caereflex arrays list
 caereflex arrays describe ARRAY_ID --json
 caereflex arrays sample ARRAY_ID --count 100 --json
+caereflex arrays slice ARRAY_ID --start 0 --stop 100 --json
 caereflex arrays reduce ARRAY_ID --operation mean --json
 ```
+
+Incomplete legacy cases remain supported through the metadata-only fallback:
+
+```bash
+caereflex scan examples/openfoam_cavity_minimal --out minimal_manifest.json
+caereflex execution run minimal_manifest.json \
+  --source-root examples/openfoam_cavity_minimal \
+  --backend core.manifest-audit \
+  --json
+```
+
+Gate 5B decodes native OpenFOAM ASCII. Binary payloads are detected but not guessed. Includes, substitutions, code streams, coded boundary conditions and dynamic libraries are preserved literally and never expanded or executed.
 
 Mock CrossRef path:
 
@@ -54,6 +65,6 @@ caereflex crossref attach examples/crossref_context/sample_case.json \
 caereflex export bibtex caereflex.with_literature.json --out references.bib
 ```
 
-A successful execution or dimensional check does not validate the model, prove convergence, assess mesh adequacy, certify the result or establish design safety.
+A successful native read or dimensional check does not validate the model, prove convergence, assess mesh adequacy, certify the result or establish design safety.
 
-See `docs/GATES_1_3_FOUNDATION.md`, `docs/GATE_4_DIMENSIONS_UNITS.md`, `docs/GATE_5A_SAFE_EXECUTION_RUNTIME.md`, `docs/CLI_FOUNDATION.md`, and `docs/ADAPTER_PLUGIN_CONTRACT.md`.
+See `docs/GATES_1_3_FOUNDATION.md`, `docs/GATE_4_DIMENSIONS_UNITS.md`, `docs/GATE_5A_SAFE_EXECUTION_RUNTIME.md`, `docs/GATE_5B_OPENFOAM_NATIVE.md`, `docs/CLI_FOUNDATION.md`, and `docs/ADAPTER_PLUGIN_CONTRACT.md`.
