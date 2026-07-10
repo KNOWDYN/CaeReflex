@@ -27,6 +27,8 @@ python -m pip install -e ".[vtk]"
 python -m pip install -e ".[mesh]"
 ```
 
+VTK may reserve substantial virtual address space while its native modules load. The default worker memory ceiling is intentionally conservative. If a trusted deployment enables PyVista, give that worker an explicitly reviewed memory budget appropriate to the platform, for example through `CaeReflexConfig(max_execution_memory_mb=4096)` or `ExecutionPolicy(max_memory_bytes=4 * 1024**3)`. CaeReflex records an import or resource failure and continues through declared fallbacks; it does not silently disable the worker limit.
+
 The core reader supports legacy ASCII VTK and single-piece XML VTK with inline ASCII or uncompressed inline base64 `DataArray` values. Binary legacy, compressed XML and appended XML require an optional reader or fall back explicitly.
 
 ## Dataset evidence
