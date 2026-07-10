@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0a4 — Gate 5D native VTK inspection
+
+- Added the isolated `vtk.native` execution backend.
+- Added optional PyVista/VTK-first and meshio-second decoding for supported VTK datasets.
+- Added dependency-free bounded readers for legacy ASCII VTK and single-piece XML VTK with inline ASCII or uncompressed inline base64 arrays.
+- Added points, bounds, structured extents, rectilinear coordinate axes, cell connectivity, offsets and VTK cell-type evidence.
+- Added point, cell and field data behind content-addressed lazy `ArrayRef` handles.
+- Added `.pvd`, multiblock and parallel-file reference inventories with time values and no automatic external-reference loading.
+- Added explicit fallbacks for malformed, binary, appended, compressed, unsafe-reference and dependency-limited inputs.
+- Routed `deep` and `forensic` VTK inspection through the native backend.
+- Kept coordinate and field units unresolved unless supplied by explicit evidence.
+- Completed the Gate 5 native-reader line for OpenFOAM, Gmsh and VTK without adding spatial inference or physics validation.
+
 ## 2.0.0a3 — Gate 5C native Gmsh inspection
 
 - Added the isolated `gmsh.native` execution backend.
