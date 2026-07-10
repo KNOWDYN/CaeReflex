@@ -29,13 +29,19 @@ def backends(json_mode: bool = typer.Option(False, "--json")) -> None:
     console.print(table)
 
 
+def _default_state_root(source_root: Path) -> Path:
+    resolved = source_root.expanduser().resolve()
+    normalized_source = resolved.parent if resolved.is_file() else resolved
+    return normalized_source.parent / ".caereflex"
+
+
 @execution_app.command("run")
 def run_execution(
     manifest_json: Path,
     source_root: Path = typer.Option(..., "--source-root"),
     backend: str = typer.Option("core.manifest-audit", "--backend"),
     plugin_id: str = typer.Option("core", "--plugin-id"),
-    state_root: Path = typer.Option(Path(".caereflex"), "--state-root"),
+    state_root: Path | None = typer.Option(None, "--state-root"),
     profile: InspectionProfile = typer.Option(InspectionProfile.deep),
     max_wall_time: float = typer.Option(30.0, min=0.1),
     max_bytes_read: int = typer.Option(25 * 1024 * 1024, min=0),
@@ -66,7 +72,7 @@ def run_execution(
             plan,
             backend_id=backend,
             source_root=source_root,
-            state_root=state_root,
+            state_root=state_root or _default_state_root(source_root),
             backend_options=backend_options,
             policy=ExecutionPolicy(),
         )
