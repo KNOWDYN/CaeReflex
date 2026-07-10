@@ -7,7 +7,7 @@ Current CLI command surface:
 | `version` | Print the package version. |
 | `doctor` | Report the Python environment, core dependencies, units backend, execution runtime, contract version, and adapter capabilities. |
 | `scan` | Build a bounded metadata-only case manifest without materialising large mesh or field arrays. |
-| `inspect` | Discover, inspect and export a case; `deep` and `forensic` profiles invoke the bounded execution runtime and a completed native backend when available. |
+| `inspect` | Discover, inspect and export a case; `deep` and `forensic` profiles invoke the bounded native backend for OpenFOAM, Gmsh or VTK. |
 | `inspect-gmsh` | Deprecated compatibility alias for Gmsh inspection. |
 | `inspect-openfoam` | Deprecated compatibility alias for OpenFOAM inspection. |
 | `inspect-vtk` | Deprecated compatibility alias for VTK inspection. |
@@ -48,28 +48,23 @@ caereflex units convert 1 bar Pa --json
 caereflex units check "m/s" velocity --name U --json
 ```
 
-`units parse` and `units convert` use Pint for unit parsing, dimensionality and conversion. CaeReflex serialises only ordinary JSON values; Pint objects never appear in ReflexCase or agent payloads.
+`units parse` and `units convert` use Pint. CaeReflex serialises ordinary JSON values only; Pint objects never appear in ReflexCase or agent payloads.
 
-`units check` compares base dimensions, not names. A conflicting result exits with code `6`, emits `CRX-UNITS-DIMENSION-MISMATCH-001`, and blocks automated interpretation until a human reviews the source. A compatible result confirms dimensional compatibility only; it does not prove that the variable has the intended physical role.
+`units check` compares base dimensions, not names. A conflict emits `CRX-UNITS-DIMENSION-MISMATCH-001` and blocks automated interpretation until reviewed. Dimensional compatibility does not prove physical role.
 
-OpenFOAM dimensions are represented in the order `[mass length time temperature substance current luminosity]`. CaeReflex preserves the original vector and derives a canonical SI unit representation. That representation does not erase the distinction between pressure and incompressible kinematic pressure.
-
-Gmsh coordinates and result arrays do not establish physical units by themselves. Native Gmsh summaries therefore preserve coordinate and field units as unresolved unless another explicit evidence source supplies them.
+OpenFOAM dimensions use `[mass length time temperature substance current luminosity]`. Gmsh and VTK coordinates and fields do not establish units by themselves, so native summaries preserve units as unresolved unless explicit evidence supplies them.
 
 ## Bounded discovery and safe execution
-
-Use catalogue mode before deep inspection:
 
 ```bash
 caereflex doctor
 caereflex scan examples/openfoam_cavity_minimal --out openfoam-manifest.json
-caereflex adapters probe examples/openfoam_cavity_minimal
 caereflex scan examples/gmsh_minimal/t1.geo --out gmsh-manifest.json
-caereflex adapters probe examples/gmsh_minimal/t1.geo
+caereflex scan examples/vtk_minimal/sample.vtk --out vtk-manifest.json
 caereflex execution backends
 ```
 
-`scan` accepts resource limits including `--max-files`, `--max-depth`, `--max-bytes-read`, and `--max-wall-time`. Reaching a limit produces an explicit diagnostic and a truncated manifest; it is never presented as a complete inspection.
+`scan` accepts `--max-files`, `--max-depth`, `--max-bytes-read`, and `--max-wall-time`. Reaching a limit produces an explicit truncated manifest.
 
 Run completed native backends directly:
 
@@ -83,29 +78,34 @@ caereflex execution run gmsh-manifest.json \
   --source-root examples/gmsh_minimal/t1.geo \
   --backend gmsh.native \
   --json
+
+caereflex execution run vtk-manifest.json \
+  --source-root examples/vtk_minimal/sample.vtk \
+  --backend vtk.native \
+  --json
 ```
 
-The worker runs in a subprocess with parent-enforced wall time, bounded serialised output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
+The worker applies parent-enforced wall time, bounded serialised output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
 
-## Inspection with manifest, dimensions and execution evidence
+## Native deep inspection
 
 ```bash
 caereflex inspect examples/openfoam_cavity_minimal \
-  --adapter openfoam \
-  --profile deep \
-  --manifest-out openfoam-manifest.json \
+  --adapter openfoam --profile deep \
   --out openfoam.caereflex.json
 
 caereflex inspect examples/gmsh_minimal/t1.geo \
-  --adapter gmsh \
-  --profile deep \
-  --manifest-out gmsh-manifest.json \
+  --adapter gmsh --profile deep \
   --out gmsh.caereflex.json
+
+caereflex inspect examples/vtk_minimal/sample.vtk \
+  --adapter vtk --profile deep \
+  --out vtk.caereflex.json
 ```
 
-OpenFOAM deep inspection uses `openfoam.native`; Gmsh deep inspection uses `gmsh.native`. VTK continues to use `core.manifest-audit` until Gate 5D. Outputs include execution metadata, ordered parser attempts, diagnostics and bounded lazy-array references.
+OpenFOAM uses `openfoam.native`, Gmsh uses `gmsh.native`, and VTK uses `vtk.native`. Outputs include execution metadata, ordered parser attempts, diagnostics and bounded lazy-array references.
 
-The Gmsh `.geo` path is declaration-only and never executes the script. `.msh` uses optional meshio first and the built-in MSH 2.x/4.x ASCII reader second. STEP, IGES and BREP remain fingerprint-only unless the optional Gmsh API is explicitly enabled for trusted inputs.
+The Gmsh `.geo` path is declaration-only. VTK collection and parallel metadata are reference/time inventories only; they do not cause hidden external-reference loading.
 
 ## Jobs and arrays
 
@@ -119,14 +119,14 @@ caereflex arrays slice ARRAY_ID --start 0 --stop 100 --json
 caereflex arrays reduce ARRAY_ID --operation mean --json
 ```
 
-Array queries are allowed only when declared by the `ArrayRef` and are capped by a result-element limit. Complete industrial arrays are never emitted into ReflexCase JSON or an LLM context.
+Array queries are allowed only when declared by the `ArrayRef` and are capped by an element limit. Complete industrial arrays are never emitted into ReflexCase JSON or an LLM context.
 
 ## Machine-readable output
 
-Commands that expose `--json` emit JSON on standard output. Human-readable status text is suppressed in JSON mode so scripts can parse the result directly.
+Commands exposing `--json` emit JSON on standard output. Human-readable status text is suppressed in JSON mode.
 
 ## Compatibility
 
-The `inspect-gmsh`, `inspect-openfoam`, and `inspect-vtk` commands remain available during the migration to the unified `inspect --adapter ...` interface. Existing schema-v1 ReflexCase payloads remain valid because Gate 5 contract extensions are additive.
+The `inspect-gmsh`, `inspect-openfoam`, and `inspect-vtk` aliases remain available during migration to `inspect --adapter ...`. Schema-v1 ReflexCase payloads remain valid because Gate 5 contract extensions are additive.
 
 Successful command execution does not establish simulation validity, geometry validity, convergence, mesh adequacy, certification or design safety.

@@ -11,14 +11,17 @@ from caereflex.contracts import AttemptOutcome, InspectionExecutionRequest, Pars
 from caereflex.core.provenance import utc_now_iso
 from caereflex.execution.context import ExecutionContext
 from caereflex.execution import gmsh_native as _gmsh_native
+from caereflex.execution import vtk_native as _vtk_native
 from caereflex.execution.gmsh_api import gmsh_api_summary
 from caereflex.execution.openfoam_native import OpenFOAMNativeBackend
+from caereflex.execution.vtk_pyvista import pyvista_summary
 
-# Gmsh releases return either Python lists or NumPy-like arrays from the same API
-# calls. Keep the large format reader independent while installing the narrowly
-# scoped, dependency-free compatibility function used only by explicit API opt-in.
+# Optional native APIs vary across library releases. Install narrow compatibility
+# functions without coupling the dependency-free format readers to optional packages.
 _gmsh_native._gmsh_api_summary = gmsh_api_summary
 GmshNativeBackend = _gmsh_native.GmshNativeBackend
+_vtk_native._pyvista_summary = pyvista_summary
+VTKNativeBackend = _vtk_native.VTKNativeBackend
 
 
 class ManifestAuditBackend:
@@ -120,5 +123,6 @@ BUILTIN_BACKENDS = {
     ManifestAuditBackend.backend_id: ManifestAuditBackend,
     GmshNativeBackend.backend_id: GmshNativeBackend,
     OpenFOAMNativeBackend.backend_id: OpenFOAMNativeBackend,
+    VTKNativeBackend.backend_id: VTKNativeBackend,
     TestExecutionBackend.backend_id: TestExecutionBackend,
 }

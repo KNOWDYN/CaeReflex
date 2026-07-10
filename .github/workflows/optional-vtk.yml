@@ -1,0 +1,82 @@
+name: Optional VTK Backends
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  meshio:
+    name: meshio VTK reader
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install meshio and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[mesh,dev]"
+
+      - name: Compile package
+        run: python -m compileall -q caereflex
+
+      - name: Run optional meshio VTK tests
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_mesh tests/test_gate5d_vtk_optional_meshio.py \
+            2>&1 | tee optional-meshio-vtk.log
+
+      - name: Upload meshio VTK report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-meshio-vtk
+          path: optional-meshio-vtk.log
+          if-no-files-found: error
+
+  pyvista:
+    name: PyVista VTK reader
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install PyVista, VTK and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[vtk,dev]"
+
+      - name: Compile package
+        run: python -m compileall -q caereflex
+
+      - name: Run optional PyVista VTK tests
+        env:
+          PYVISTA_OFF_SCREEN: "true"
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_vtk tests/test_gate5d_vtk_optional_pyvista.py \
+            2>&1 | tee optional-pyvista-vtk.log
+
+      - name: Upload PyVista VTK report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-pyvista-vtk
+          path: optional-pyvista-vtk.log
+          if-no-files-found: error
