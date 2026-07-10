@@ -57,6 +57,17 @@ def test_numeric_array_registration_and_queries(tmp_path: Path):
     assert arrays.reduce(ref.array_id, "mean", component=1)["value"] == 3.0
 
 
+def test_array_describe_reverifies_payload_integrity(tmp_path: Path):
+    arrays = ArrayService(tmp_path / "state")
+    ref = arrays.register_numeric([1.0, 2.0], dtype="float64", shape=(2,))
+    payload = arrays.store.resolve(ref.uri)
+    payload.chmod(0o644)
+    payload.write_bytes(b"corrupt")
+
+    with pytest.raises(ArrayQueryError, match="integrity"):
+        arrays.describe(ref.array_id)
+
+
 def test_array_queries_enforce_declared_operations_and_output_limits(tmp_path: Path):
     arrays = ArrayService(tmp_path / "state", max_elements_returned=2)
     ref = arrays.register_numeric([1, 2, 3, 4], dtype="int32", shape=(4,))
