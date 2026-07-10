@@ -42,7 +42,6 @@ time 1 1 double
 2.5
 """
 
-
 VTU_ASCII = """<?xml version="1.0"?>
 <VTKFile type="UnstructuredGrid" version="1.0" byte_order="LittleEndian" header_type="UInt32">
   <UnstructuredGrid>
@@ -51,15 +50,9 @@ VTU_ASCII = """<?xml version="1.0"?>
         <DataArray type="Float64" Name="temperature" format="ascii">10 20 30 40</DataArray>
         <DataArray type="Float64" Name="velocity" NumberOfComponents="3" format="ascii">0 0 0 1 0 0 1 1 0 0 1 0</DataArray>
       </PointData>
-      <CellData>
-        <DataArray type="Float64" Name="quality" format="ascii">0.8 0.9</DataArray>
-      </CellData>
-      <FieldData>
-        <DataArray type="Float64" Name="time" format="ascii">1.5</DataArray>
-      </FieldData>
-      <Points>
-        <DataArray type="Float64" NumberOfComponents="3" format="ascii">0 0 0 1 0 0 1 1 0 0 1 0</DataArray>
-      </Points>
+      <CellData><DataArray type="Float64" Name="quality" format="ascii">0.8 0.9</DataArray></CellData>
+      <FieldData><DataArray type="Float64" Name="time" format="ascii">1.5</DataArray></FieldData>
+      <Points><DataArray type="Float64" NumberOfComponents="3" format="ascii">0 0 0 1 0 0 1 1 0 0 1 0</DataArray></Points>
       <Cells>
         <DataArray type="Int64" Name="connectivity" format="ascii">0 1 2 0 2 3</DataArray>
         <DataArray type="Int64" Name="offsets" format="ascii">3 6</DataArray>
@@ -70,18 +63,14 @@ VTU_ASCII = """<?xml version="1.0"?>
 </VTKFile>
 """
 
-
 APPENDED_VTU = """<?xml version="1.0"?>
 <VTKFile type="UnstructuredGrid" version="1.0" byte_order="LittleEndian" header_type="UInt32">
-  <UnstructuredGrid>
-    <Piece NumberOfPoints="1" NumberOfCells="0">
-      <Points><DataArray type="Float32" NumberOfComponents="3" format="appended" offset="0"/></Points>
-    </Piece>
-  </UnstructuredGrid>
+  <UnstructuredGrid><Piece NumberOfPoints="1" NumberOfCells="0">
+    <Points><DataArray type="Float32" NumberOfComponents="3" format="appended" offset="0"/></Points>
+  </Piece></UnstructuredGrid>
   <AppendedData encoding="base64">_AAAAAA==</AppendedData>
 </VTKFile>
 """
-
 
 PVD = """<?xml version="1.0"?>
 <VTKFile type="Collection" version="1.0" byte_order="LittleEndian">
@@ -142,13 +131,11 @@ def test_legacy_ascii_vtk_decodes_topology_fields_and_lazy_arrays(tmp_path: Path
     source = tmp_path / "source"
     source.mkdir()
     (source / "mesh.vtk").write_text(LEGACY_VTK, encoding="utf-8")
-
     result = _execute(source, ["mesh.vtk"], tmp_path / "state")
 
     assert result.status == "success"
     assert result.source_mutation_detected is False
-    summary = result.metadata["backend_result"]["summary"]
-    dataset = summary["files"][0]
+    dataset = result.metadata["backend_result"]["summary"]["files"][0]
     assert dataset["reader"] == "vtk.core"
     assert dataset["dataset_type"] == "UNSTRUCTURED_GRID"
     assert dataset["point_count"] == 4
@@ -157,10 +144,8 @@ def test_legacy_ascii_vtk_decodes_topology_fields_and_lazy_arrays(tmp_path: Path
     assert dataset["bounds"] == [[0.0, 1.0], [0.0, 1.0], [0.0, 0.0]]
     assert dataset["cell_types"] == [{"vtk_type": 5, "name": "triangle", "dimension": 2, "count": 2}]
     assert {(field["name"], field["association"], field["components"]) for field in dataset["fields"]} == {
-        ("pressure", "point", 1),
-        ("velocity", "point", 3),
-        ("quality", "cell", 1),
-        ("time", "field", 1),
+        ("pressure", "point", 1), ("velocity", "point", 3),
+        ("quality", "cell", 1), ("time", "field", 1),
     }
     assert any(attempt.backend_id == "vtk.core" and attempt.outcome == "success" for attempt in result.attempts)
 
@@ -171,14 +156,15 @@ def test_legacy_ascii_vtk_decodes_topology_fields_and_lazy_arrays(tmp_path: Path
     pressure = next(field for field in dataset["fields"] if field["name"] == "pressure")
     assert arrays.reduce(pressure["array_id"], "mean")["value"] == 0.1
     velocity = next(field for field in dataset["fields"] if field["name"] == "velocity")
-    assert arrays.sample(velocity["array_id"], 3)["values"] == [0.0, 0.0, 0.0]
+    sample = arrays.sample(velocity["array_id"], 3)
+    assert sample["indices"] == [0, 6, 11]
+    assert sample["values"] == [0.0, 1.0, 0.0]
 
 
 def test_xml_vtu_decodes_points_cells_and_all_field_associations(tmp_path: Path):
     source = tmp_path / "source"
     source.mkdir()
     (source / "mesh.vtu").write_text(VTU_ASCII, encoding="utf-8")
-
     result = _execute(source, ["mesh.vtu"], tmp_path / "state")
 
     assert result.status == "success"
@@ -190,10 +176,8 @@ def test_xml_vtu_decodes_points_cells_and_all_field_associations(tmp_path: Path)
     assert dataset["dimension"] == 2
     assert dataset["bounds"] == [[0.0, 1.0], [0.0, 1.0], [0.0, 0.0]]
     assert {(field["name"], field["association"]) for field in dataset["fields"]} == {
-        ("temperature", "point"),
-        ("velocity", "point"),
-        ("quality", "cell"),
-        ("time", "field"),
+        ("temperature", "point"), ("velocity", "point"),
+        ("quality", "cell"), ("time", "field"),
     }
     arrays = ArrayService(tmp_path / "state")
     temperature = next(field for field in dataset["fields"] if field["name"] == "temperature")
@@ -207,12 +191,7 @@ def test_pvd_inventory_reports_times_and_blocks_unsafe_references(tmp_path: Path
     (source / "series.pvd").write_text(PVD, encoding="utf-8")
     (source / "step0.vtu").write_text(VTU_ASCII, encoding="utf-8")
     (source / "step1.vtu").write_text(VTU_ASCII, encoding="utf-8")
-
-    result = _execute(
-        source,
-        ["series.pvd", "step0.vtu", "step1.vtu"],
-        tmp_path / "state",
-    )
+    result = _execute(source, ["series.pvd", "step0.vtu", "step1.vtu"], tmp_path / "state")
 
     assert result.status == "success"
     summary = result.metadata["backend_result"]["summary"]
@@ -231,7 +210,6 @@ def test_appended_xml_falls_back_to_fingerprint_without_parent_failure(tmp_path:
     source = tmp_path / "source"
     source.mkdir()
     (source / "appended.vtu").write_text(APPENDED_VTU, encoding="utf-8")
-
     result = _execute(source, ["appended.vtu"], tmp_path / "state")
 
     assert result.status == "success"
@@ -246,9 +224,12 @@ def test_deep_vtk_inspection_is_integrated_with_reflexcase(tmp_path: Path):
     source = tmp_path / "source"
     source.mkdir()
     (source / "mesh.vtk").write_text(LEGACY_VTK, encoding="utf-8")
-    config = CaeReflexConfig(state_dir=tmp_path / "state")
-
-    case = inspect_path(source / "mesh.vtk", adapter="vtk", profile="deep", config=config)
+    case = inspect_path(
+        source / "mesh.vtk",
+        adapter="vtk",
+        profile="deep",
+        config=CaeReflexConfig(state_dir=tmp_path / "state"),
+    )
 
     assert case.metadata["inspection_execution"]["backend_id"] == "vtk.native"
     assert case.metadata["native_vtk"]["dataset_count"] == 1
@@ -263,4 +244,4 @@ def test_vtk_plugin_and_backend_declare_native_capability():
     assert capabilities.geometry_support == "points-bounds-structured-extents-and-rectilinear-coordinates"
     assert capabilities.topology_support == "pyvista-meshio-and-core-legacy-xml-connectivity"
     assert capabilities.field_support == "point-cell-field-data-with-lazy-array-references"
-    assert "vtk.native" in {item.backend_id for item in list_execution_backends()}
+    assert "vtk.native" in {item["backend_id"] for item in list_execution_backends()}
