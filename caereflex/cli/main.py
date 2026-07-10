@@ -8,6 +8,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from caereflex.cli.arrays import arrays_app
+from caereflex.cli.execution import execution_app
+from caereflex.cli.jobs import jobs_app
 from caereflex.cli.units import units_app
 from caereflex.contracts import InspectionBudget, InspectionProfile
 from caereflex.core.config import CaeReflexConfig
@@ -39,6 +42,9 @@ schema_app = group("schema", "Inspect and validate schemas.")
 diagnostics_app = group("diagnostics", "Explain stable diagnostic codes.")
 cache_app = group("cache", "Manage the catalogue cache.")
 app.add_typer(units_app, name="units")
+app.add_typer(execution_app, name="execution")
+app.add_typer(arrays_app, name="arrays")
+app.add_typer(jobs_app, name="jobs")
 
 
 def emit(data: dict[str, Any], json_mode: bool = False) -> None:

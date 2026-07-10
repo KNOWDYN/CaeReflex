@@ -1,4 +1,4 @@
-"""Central diagnostic catalogue used by CLI, manifests, units, and adapters."""
+"""Central diagnostic catalogue used by CLI, manifests, units, execution, and adapters."""
 from __future__ import annotations
 
 DIAGNOSTICS: dict[str, dict[str, str]] = {
@@ -56,6 +56,51 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "title": "Dimensions declaration missing",
         "explanation": "A field was found, but no parseable dimensions declaration was available.",
         "action": "Review the field source and supply dimensions explicitly; do not treat name-based inference as confirmed units.",
+    },
+    "CRX-EXEC-START-001": {
+        "title": "Deep execution could not start",
+        "explanation": "The execution request was rejected before an isolated worker could begin.",
+        "action": "Review the source root, selected paths, execution policy, state directory, and filesystem permissions.",
+    },
+    "CRX-EXEC-BACKEND-001": {
+        "title": "Execution backend failed",
+        "explanation": "The selected isolated backend raised an exception and returned no complete deep-inspection result.",
+        "action": "Inspect the parser-attempt ledger and worker log, then use a declared fallback or repair the input/backend installation.",
+    },
+    "CRX-EXEC-TIMEOUT-001": {
+        "title": "Execution time budget exceeded",
+        "explanation": "The isolated worker exceeded its wall-time budget and was terminated.",
+        "action": "Narrow the inspection plan or increase the budget only for trusted inputs and backends.",
+    },
+    "CRX-EXEC-CRASH-001": {
+        "title": "Execution worker crashed",
+        "explanation": "The isolated worker exited without a valid result payload, including native-library crashes or forced termination.",
+        "action": "Review the worker log and input fixture; do not retry untrusted malformed files without stronger isolation.",
+    },
+    "CRX-EXEC-RESULT-001": {
+        "title": "Execution result invalid or oversized",
+        "explanation": "The worker result could not be validated or exceeded the configured serialized-output limit.",
+        "action": "Keep heavy data behind ArrayRef handles and reduce backend summary size.",
+    },
+    "CRX-EXEC-SOURCE-MUTATION-001": {
+        "title": "Inspected source changed during execution",
+        "explanation": "Before-and-after source snapshots differed while an isolated backend was running.",
+        "action": "Treat the result as failed, investigate the backend, and restore the engineering source from a trusted copy if required.",
+    },
+    "CRX-EXEC-SNAPSHOT-PARTIAL-001": {
+        "title": "Source snapshot only partially hashed",
+        "explanation": "Some selected files exceeded the hashing budget, so immutability was checked using metadata rather than a complete byte hash.",
+        "action": "Increase the source-hashing budget when byte-for-byte verification is required.",
+    },
+    "CRX-ARRAY-QUERY-001": {
+        "title": "Lazy-array query rejected",
+        "explanation": "An array query exceeded its result limit, requested an unsupported operation, or referenced invalid bounds or metadata.",
+        "action": "Use describe first, request a smaller sample or slice, and select only operations declared by the ArrayRef.",
+    },
+    "CRX-ARTIFACT-INTEGRITY-001": {
+        "title": "Artefact integrity check failed",
+        "explanation": "A content-addressed artefact did not match its recorded SHA-256 digest or resolved outside the configured store.",
+        "action": "Stop using the artefact, preserve logs, and recreate the local state directory from trusted sources.",
     },
 }
 

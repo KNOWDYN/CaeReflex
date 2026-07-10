@@ -1,3 +1,5 @@
 def test_import():
     import caereflex
-    assert caereflex.__version__ == "1.0.0"
+    from caereflex.version import __version__
+
+    assert caereflex.__version__ == __version__

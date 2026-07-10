@@ -2,12 +2,15 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 from pydantic import BaseModel, Field, ConfigDict
+from caereflex.version import __version__
 from .provenance import utc_now_iso
+
 
 class InspectionStatus(str, Enum):
     success = "success"
     partial_success = "partial_success"
     failed = "failed"
+
 
 class CaseType(str, Enum):
     unknown = "unknown"
@@ -16,6 +19,7 @@ class CaseType(str, Enum):
     vtk = "vtk"
     mixed = "mixed"
 
+
 class SourceKind(str, Enum):
     extracted = "extracted"
     inferred = "inferred"
@@ -23,10 +27,12 @@ class SourceKind(str, Enum):
     user_supplied = "user_supplied"
     external_metadata = "external_metadata"
 
+
 class Severity(str, Enum):
     info = "info"
     warning = "warning"
     error = "error"
+
 
 class AssetType(str, Enum):
     geometry = "geometry"
@@ -38,11 +44,13 @@ class AssetType(str, Enum):
     literature = "literature"
     unknown = "unknown"
 
+
 class EvidenceStatus(str, Enum):
     abstract_available = "abstract_available"
     metadata_only = "metadata_only"
     reference_only = "reference_only"
     unavailable = "unavailable"
+
 
 class AdapterStatus(str, Enum):
     success = "success"
@@ -50,6 +58,7 @@ class AdapterStatus(str, Enum):
     failed = "failed"
     dependency_missing = "dependency_missing"
     unsupported = "unsupported"
+
 
 class FieldAssociation(str, Enum):
     point = "point"
@@ -59,17 +68,20 @@ class FieldAssociation(str, Enum):
     volume = "volume"
     unknown = "unknown"
 
+
 class FieldType(str, Enum):
     scalar = "scalar"
     vector = "vector"
     tensor = "tensor"
     unknown = "unknown"
 
+
 class HashStatus(str, Enum):
     complete = "complete"
     skipped_large = "skipped_large"
     failed = "failed"
     not_applicable = "not_applicable"
+
 
 class TraceInfo(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -79,6 +91,7 @@ class TraceInfo(BaseModel):
     confidence: float = 1.0
     notes: list[str] = Field(default_factory=list)
 
+
 class InspectionInfo(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
     status: InspectionStatus = InspectionStatus.partial_success
@@ -86,11 +99,13 @@ class InspectionInfo(BaseModel):
     completed_at: str | None = None
     messages: list[str] = Field(default_factory=list)
 
+
 class WorkspaceInfo(BaseModel):
     root_display: str = "."
     scan_depth: int = 0
     file_count_considered: int = 0
     limits: dict[str, Any] = Field(default_factory=dict)
+
 
 class SourceFileRecord(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -103,6 +118,7 @@ class SourceFileRecord(BaseModel):
     metadata_subset: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
 
+
 class EngineeringAsset(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
     asset_id: str
@@ -112,6 +128,7 @@ class EngineeringAsset(BaseModel):
     properties: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
 
+
 class SolverRecord(BaseModel):
     name: str | None = None
     application: str | None = None
@@ -119,6 +136,7 @@ class SolverRecord(BaseModel):
     end_time: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
+
 
 class BoundaryConditionRecord(BaseModel):
     patch: str
@@ -128,6 +146,7 @@ class BoundaryConditionRecord(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
 
+
 class MaterialPropertyRecord(BaseModel):
     name: str
     value: str | float | int | None = None
@@ -135,12 +154,14 @@ class MaterialPropertyRecord(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
 
+
 class NumericalSettingsRecord(BaseModel):
     category: str
     name: str
     value: Any = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
+
 
 class ResultFieldRecord(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -151,6 +172,7 @@ class ResultFieldRecord(BaseModel):
     statistics: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=TraceInfo)
+
 
 class LiteratureEvidenceRecord(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -167,6 +189,7 @@ class LiteratureEvidenceRecord(BaseModel):
     metadata_subset: dict[str, Any] = Field(default_factory=dict)
     trace: TraceInfo = Field(default_factory=lambda: TraceInfo(source_kind=SourceKind.external_metadata, adapter="crossref"))
 
+
 class LiteratureContext(BaseModel):
     queries: list[str] = Field(default_factory=list)
     records_used: list[str] = Field(default_factory=list)
@@ -177,6 +200,7 @@ class LiteratureContext(BaseModel):
         "Do not claim that CrossRef evidence validates the simulation.",
     ])
 
+
 class InspectionFlag(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
     severity: Severity = Severity.info
@@ -184,11 +208,13 @@ class InspectionFlag(BaseModel):
     message: str
     trace: TraceInfo = Field(default_factory=TraceInfo)
 
+
 class ProvenanceRecord(BaseModel):
     event: str
     timestamp: str = Field(default_factory=utc_now_iso)
     actor: str = "caereflex"
     details: dict[str, Any] = Field(default_factory=dict)
+
 
 class AgentSummary(BaseModel):
     summary: str = ""
@@ -196,10 +222,12 @@ class AgentSummary(BaseModel):
     recommended_next_actions: list[str] = Field(default_factory=list)
     do_not_claim: list[str] = Field(default_factory=list)
 
+
 class ExportRecord(BaseModel):
     export_type: str
     relative_path: str | None = None
     created_at: str = Field(default_factory=utc_now_iso)
+
 
 class ReflexCase(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -209,7 +237,7 @@ class ReflexCase(BaseModel):
     case_type: CaseType = CaseType.unknown
     created_at: str = Field(default_factory=utc_now_iso)
     updated_at: str = Field(default_factory=utc_now_iso)
-    caereflex_version: str = "1.0.0"
+    caereflex_version: str = __version__
     workspace: WorkspaceInfo = Field(default_factory=WorkspaceInfo)
     inspection: InspectionInfo = Field(default_factory=InspectionInfo)
     detected_formats: list[str] = Field(default_factory=list)
@@ -236,6 +264,7 @@ class ReflexCase(BaseModel):
     dimensional_checks: list[dict[str, Any]] = Field(default_factory=list)
     array_references: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class AdapterResult(BaseModel):
     model_config = ConfigDict(use_enum_values=True)

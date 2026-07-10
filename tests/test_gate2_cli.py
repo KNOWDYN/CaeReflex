@@ -2,6 +2,7 @@ import json
 from typer.testing import CliRunner
 
 from caereflex.cli.main import app
+from caereflex.version import __version__
 
 runner = CliRunner()
 
@@ -9,7 +10,7 @@ runner = CliRunner()
 def test_existing_version_command_remains_compatible():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "1.0.0" in result.output
+    assert result.output.strip() == __version__
 
 
 def test_doctor_has_machine_readable_contract_report():

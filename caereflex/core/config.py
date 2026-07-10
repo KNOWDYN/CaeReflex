@@ -1,13 +1,24 @@
 from __future__ import annotations
+import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 
+
+def _state_dir_from_environment() -> Path | None:
+    value = os.environ.get("CAEREFLEX_STATE_DIR")
+    return Path(value) if value else None
+
+
 class CaeReflexConfig(BaseModel):
     workspace_dir: Path = Field(default_factory=lambda: Path.cwd())
+    state_dir: Path | None = Field(default_factory=_state_dir_from_environment)
     max_file_size_mb: int = 25
     max_scan_depth: int = 3
     max_scan_files: int = 500
     max_request_body_mb: int = 10
+    max_execution_memory_mb: int = 1024
+    max_execution_result_mb: int = 10
+    max_array_elements_returned: int = 10_000
     allow_nonlocal_server: bool = False
     server_api_key: str | None = None
     crossref_mailto: str | None = None
@@ -17,3 +28,15 @@ class CaeReflexConfig(BaseModel):
     @property
     def max_file_size_bytes(self) -> int:
         return self.max_file_size_mb * 1024 * 1024
+
+    @property
+    def execution_state_dir(self) -> Path:
+        return (self.state_dir or (Path.home() / ".caereflex")).expanduser().resolve()
+
+    @property
+    def max_execution_memory_bytes(self) -> int:
+        return self.max_execution_memory_mb * 1024 * 1024
+
+    @property
+    def max_execution_result_bytes(self) -> int:
+        return self.max_execution_result_mb * 1024 * 1024

@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from caereflex.core.provenance import utc_now_iso
 
-CONTRACT_VERSION = "2.0-alpha.2"
+CONTRACT_VERSION = "2.0-alpha.3"
 
 
 class EvidenceState(str, Enum):
@@ -44,6 +44,32 @@ class DimensionalConsistencyStatus(str, Enum):
     conflicted = "conflicted"
     unresolved = "unresolved"
     not_applicable = "not_applicable"
+
+
+class ExecutionStatus(str, Enum):
+    pending = "pending"
+    running = "running"
+    success = "success"
+    partial_success = "partial_success"
+    failed = "failed"
+    timed_out = "timed_out"
+    crashed = "crashed"
+    blocked = "blocked"
+
+
+class AttemptOutcome(str, Enum):
+    success = "success"
+    failed = "failed"
+    skipped = "skipped"
+    timed_out = "timed_out"
+    crashed = "crashed"
+
+
+class ArtifactLifetime(str, Enum):
+    session = "session"
+    case = "case"
+    project = "project"
+    persistent = "persistent"
 
 
 class ManifestRole(str, Enum):
@@ -117,6 +143,14 @@ class DimensionalCheck(BaseModel):
 
 
 class ArrayRef(BaseModel):
+    """Backend-neutral lazy reference to a heavy numerical array.
+
+    Fields introduced before Gate 5A remain required and unchanged. New semantic and
+    lifecycle fields are additive so existing ReflexCase payloads continue to validate.
+    """
+
+    model_config = ConfigDict(use_enum_values=True)
+
     uri: str
     format: str
     shape: tuple[int, ...]
@@ -124,6 +158,27 @@ class ArrayRef(BaseModel):
     chunks: tuple[int, ...] | None = None
     checksum: str | None = None
     selection_capabilities: list[str] = Field(default_factory=list)
+    array_id: str | None = None
+    source_asset_id: str | None = None
+    source_path: str | None = None
+    association: str | None = None
+    component_names: list[str] = Field(default_factory=list)
+    quantity_evidence_ref: str | None = None
+    coordinate_frame_ref: str | None = None
+    time_index: str | float | int | None = None
+    byte_order: str = "little"
+    backend: str | None = None
+    backend_version: str | None = None
+    storage_lifetime: ArtifactLifetime = ArtifactLifetime.case
+    permitted_operations: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("shape")
+    @classmethod
+    def non_negative_shape(cls, value: tuple[int, ...]) -> tuple[int, ...]:
+        if not value or any(item < 0 for item in value):
+            raise ValueError("shape must contain one or more non-negative dimensions")
+        return value
 
 
 class DiagnosticEvent(BaseModel):
@@ -138,6 +193,57 @@ class DiagnosticEvent(BaseModel):
     fallback_used: str | None = None
     information_lost: list[str] = Field(default_factory=list)
     created_at: str = Field(default_factory=utc_now_iso)
+
+
+class ArtifactRecord(BaseModel):
+    artifact_id: str
+    digest: str
+    uri: str
+    relative_path: str
+    media_type: str = "application/octet-stream"
+    size_bytes: int
+    suffix: str = ""
+    immutable: bool = True
+    created_at: str = Field(default_factory=utc_now_iso)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ParserAttempt(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
+    attempt_id: str
+    stage: str
+    backend_id: str
+    backend_version: str | None = None
+    outcome: AttemptOutcome
+    started_at: str
+    completed_at: str | None = None
+    elapsed_seconds: float | None = None
+    exception_type: str | None = None
+    exception_message: str | None = None
+    fallback_to: str | None = None
+    information_lost: list[str] = Field(default_factory=list)
+    diagnostics: list[DiagnosticEvent] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExecutionPolicy(BaseModel):
+    allow_network: bool = False
+    allow_subprocess: bool = False
+    allow_source_mutation: bool = False
+    sanitize_environment: bool = True
+    enforce_posix_resource_limits: bool = True
+    max_memory_bytes: int | None = 1024 * 1024 * 1024
+    max_result_bytes: int = 10 * 1024 * 1024
+    max_source_hash_bytes: int = 256 * 1024 * 1024
+    environment_allowlist: list[str] = Field(default_factory=lambda: ["PATH", "SYSTEMROOT", "WINDIR", "TMP", "TEMP", "TMPDIR"])
+
+    @field_validator("max_memory_bytes", "max_result_bytes", "max_source_hash_bytes")
+    @classmethod
+    def positive_optional_limits(cls, value: int | None) -> int | None:
+        if value is not None and value <= 0:
+            raise ValueError("execution limits must be positive")
+        return value
 
 
 class ManifestEntry(BaseModel):
@@ -163,8 +269,17 @@ class InspectionBudget(BaseModel):
     max_time_steps: int = 50
     sample_cells: int = 10_000
     sample_points: int = 10_000
+    max_array_elements_returned: int = 10_000
 
-    @field_validator("max_files", "max_depth", "max_bytes_read", "max_time_steps", "sample_cells", "sample_points")
+    @field_validator(
+        "max_files",
+        "max_depth",
+        "max_bytes_read",
+        "max_time_steps",
+        "sample_cells",
+        "sample_points",
+        "max_array_elements_returned",
+    )
     @classmethod
     def non_negative_ints(cls, value: int) -> int:
         if value < 0:
@@ -236,6 +351,60 @@ class InspectionPlan(BaseModel):
     profile: InspectionProfile
     selected_paths: list[str] = Field(default_factory=list)
     budget: InspectionBudget = Field(default_factory=InspectionBudget)
+    backend_candidates: list[str] = Field(default_factory=list)
+    operation: str = "inspect"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    diagnostics: list[DiagnosticEvent] = Field(default_factory=list)
+
+
+class InspectionExecutionRequest(BaseModel):
+    execution_id: str
+    job_id: str
+    backend_id: str
+    backend_options: dict[str, Any] = Field(default_factory=dict)
+    source_root: str
+    artifact_root: str
+    manifest: CaseManifest
+    plan: InspectionPlan
+    policy: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
+
+
+class InspectionExecutionResult(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
+    execution_id: str
+    job_id: str
+    plugin_id: str
+    backend_id: str
+    backend_version: str | None = None
+    status: ExecutionStatus
+    started_at: str
+    completed_at: str | None = None
+    elapsed_seconds: float | None = None
+    bytes_read: int = 0
+    paths_accessed: list[str] = Field(default_factory=list)
+    arrays: list[ArrayRef] = Field(default_factory=list)
+    artifacts: list[ArtifactRecord] = Field(default_factory=list)
+    attempts: list[ParserAttempt] = Field(default_factory=list)
+    diagnostics: list[DiagnosticEvent] = Field(default_factory=list)
+    termination_reason: str | None = None
+    worker_exit_code: int | None = None
+    source_snapshot_complete: bool = True
+    source_mutation_detected: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class JobRecord(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
+    job_id: str
+    kind: str
+    status: ExecutionStatus = ExecutionStatus.pending
+    created_at: str = Field(default_factory=utc_now_iso)
+    started_at: str | None = None
+    completed_at: str | None = None
+    request_summary: dict[str, Any] = Field(default_factory=dict)
+    result_summary: dict[str, Any] = Field(default_factory=dict)
     diagnostics: list[DiagnosticEvent] = Field(default_factory=list)
 
 
@@ -254,3 +423,13 @@ class AdapterPlugin(Protocol):
         profile: InspectionProfile,
         budget: InspectionBudget,
     ) -> InspectionPlan: ...
+
+
+@runtime_checkable
+class ExecutionBackend(Protocol):
+    """Protocol implemented by isolated deep-inspection backends."""
+
+    backend_id: str
+    backend_version: str
+
+    def execute(self, request: InspectionExecutionRequest, context: Any) -> dict[str, Any]: ...
