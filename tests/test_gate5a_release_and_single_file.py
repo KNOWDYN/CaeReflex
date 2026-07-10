@@ -8,7 +8,7 @@ from caereflex.version import __version__
 
 def test_new_reflexcase_is_stamped_with_current_package_version():
     case = ReflexCase(case_id="case_version_fixture")
-    assert case.caereflex_version == __version__ == "2.0.0a1"
+    assert case.caereflex_version == __version__
 
 
 def test_single_file_source_root_is_normalized_to_parent(tmp_path: Path, monkeypatch):
