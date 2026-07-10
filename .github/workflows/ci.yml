@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -20,8 +20,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,22 +35,16 @@ jobs:
       - name: Compile package
         run: python -m compileall -q caereflex
 
-      - name: Regenerate and commit static OpenAPI
-        if: matrix.python-version == '3.11' && github.event_name == 'pull_request'
-        env:
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+      - name: Verify static OpenAPI parity
+        if: matrix.python-version == '3.11'
         run: |
+          rm -rf generated-openapi
           python - <<'PY'
           from caereflex.server.app import generate_openapi_files
-          generate_openapi_files('openapi')
+          generate_openapi_files('generated-openapi')
           PY
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add openapi/openapi.json openapi/openapi.yaml
-          if ! git diff --cached --quiet; then
-            git commit -m "release: regenerate OpenAPI for 2.0.0a2"
-            git push origin "HEAD:${HEAD_BRANCH}"
-          fi
+          diff -u openapi/openapi.json generated-openapi/openapi.json
+          diff -u openapi/openapi.yaml generated-openapi/openapi.yaml
 
       - name: Run deterministic core tests
         id: tests
