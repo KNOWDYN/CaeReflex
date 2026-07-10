@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from caereflex.arrays import ArrayService
 from caereflex.contracts import (
     CaseManifest,
@@ -9,7 +11,7 @@ from caereflex.contracts import (
     InspectionProfile,
     ManifestEntry,
 )
-from caereflex.execution import execute_inspection_plan
+from caereflex.execution import InspectionExecutionError, execute_inspection_plan
 from caereflex.jobs import JobStore
 
 
@@ -147,3 +149,69 @@ def test_backend_exception_returns_failed_attempt(tmp_path: Path, monkeypatch):
     assert result.status == "failed"
     assert result.attempts[0].outcome == "failed"
     assert result.diagnostics[0].code == "CRX-EXEC-BACKEND-001"
+
+
+def test_source_mutation_is_detected_and_invalidates_result(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("CAEREFLEX_ENABLE_TEST_BACKENDS", "1")
+    source_root = _source(tmp_path)
+    result = execute_inspection_plan(
+        _manifest(source_root),
+        _plan(),
+        backend_id="test.execution",
+        source_root=source_root,
+        state_root=tmp_path / "state",
+        backend_options={"mode": "mutate", "path": "input.dat", "content": "changed-by-test"},
+    )
+
+    assert result.status == "failed"
+    assert result.source_mutation_detected is True
+    diagnostic = next(item for item in result.diagnostics if item.code == "CRX-EXEC-SOURCE-MUTATION-001")
+    assert diagnostic.details["changed_paths"] == ["input.dat"]
+
+
+def test_state_root_inside_source_is_rejected(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("CAEREFLEX_ENABLE_TEST_BACKENDS", "1")
+    source_root = _source(tmp_path)
+    with pytest.raises(InspectionExecutionError, match="outside the inspected source root"):
+        execute_inspection_plan(
+            _manifest(source_root),
+            _plan(),
+            backend_id="test.execution",
+            source_root=source_root,
+            state_root=source_root / ".caereflex",
+        )
+
+
+@pytest.mark.parametrize("mode", ["network", "subprocess"])
+def test_default_worker_policy_blocks_network_and_child_processes(tmp_path: Path, monkeypatch, mode: str):
+    monkeypatch.setenv("CAEREFLEX_ENABLE_TEST_BACKENDS", "1")
+    source_root = _source(tmp_path)
+    result = execute_inspection_plan(
+        _manifest(source_root),
+        _plan(),
+        backend_id="test.execution",
+        source_root=source_root,
+        state_root=tmp_path / "state",
+        backend_options={"mode": mode},
+    )
+
+    assert result.status == "failed"
+    assert result.diagnostics[0].code == "CRX-EXEC-BACKEND-001"
+    assert "disabled" in result.termination_reason.lower()
+
+
+def test_worker_environment_is_sanitized(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("CAEREFLEX_ENABLE_TEST_BACKENDS", "1")
+    monkeypatch.setenv("CAEREFLEX_SECRET_FIXTURE", "must-not-cross-worker-boundary")
+    source_root = _source(tmp_path)
+    result = execute_inspection_plan(
+        _manifest(source_root),
+        _plan(),
+        backend_id="test.execution",
+        source_root=source_root,
+        state_root=tmp_path / "state",
+        backend_options={"mode": "environment", "key": "CAEREFLEX_SECRET_FIXTURE"},
+    )
+
+    assert result.status == "success"
+    assert result.metadata["backend_result"]["summary"]["present"] is False
