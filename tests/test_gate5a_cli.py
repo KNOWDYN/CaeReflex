@@ -5,7 +5,9 @@ from typer.testing import CliRunner
 
 from caereflex.arrays import ArrayService
 from caereflex.cli.main import app
+from caereflex.contracts import CONTRACT_VERSION
 from caereflex.services import doctor_report
+from caereflex.version import __version__
 
 runner = CliRunner()
 
@@ -13,20 +15,22 @@ runner = CliRunner()
 def test_version_and_doctor_report_alpha_runtime():
     version = runner.invoke(app, ["version"])
     assert version.exit_code == 0
-    assert version.output.strip() == "2.0.0a1"
+    assert version.output.strip() == __version__
 
     report = doctor_report()
-    assert report["caereflex_version"] == "2.0.0a1"
-    assert report["contract_version"] == "2.0-alpha.3"
+    assert report["caereflex_version"] == __version__
+    assert report["contract_version"] == CONTRACT_VERSION
     assert report["execution_runtime"]["mode"] == "local-subprocess"
-    assert any(item["backend_id"] == "core.manifest-audit" for item in report["execution_runtime"]["backends"])
+    backend_ids = {item["backend_id"] for item in report["execution_runtime"]["backends"]}
+    assert {"core.manifest-audit", "openfoam.native"}.issubset(backend_ids)
 
 
 def test_execution_backends_cli_json():
     result = runner.invoke(app, ["execution", "backends", "--json"])
     assert result.exit_code == 0
     payload = json.loads(result.output)
-    assert payload["execution_backends"][0]["backend_id"] == "core.manifest-audit"
+    backend_ids = {item["backend_id"] for item in payload["execution_backends"]}
+    assert {"core.manifest-audit", "openfoam.native"}.issubset(backend_ids)
 
 
 def test_arrays_cli_queries_registered_array(tmp_path: Path):
@@ -65,9 +69,10 @@ def test_deep_profile_records_execution_job(tmp_path: Path):
     assert result.exit_code in {0, 2}
     payload = json.loads(output.read_text(encoding="utf-8"))
     execution = payload["metadata"]["inspection_execution"]
-    assert execution["backend_id"] == "core.manifest-audit"
+    assert execution["backend_id"] == "openfoam.native"
     assert execution["status"] == "success"
-    assert execution["attempts"][0]["outcome"] == "success"
+    assert execution["attempts"]
+    assert payload["metadata"]["native_openfoam"]["reader"] == "openfoam.native"
 
     job = runner.invoke(
         app,
