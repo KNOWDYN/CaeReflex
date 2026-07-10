@@ -95,7 +95,12 @@ class ExecutionContext:
         """Append one ordered native/fallback parser attempt to the execution ledger."""
 
         self.attempts.append(attempt)
-        self.diagnostics.extend(attempt.diagnostics)
+        existing = {item.model_dump_json() for item in self.diagnostics}
+        for diagnostic in attempt.diagnostics:
+            key = diagnostic.model_dump_json()
+            if key not in existing:
+                self.diagnostics.append(diagnostic)
+                existing.add(key)
         return attempt
 
     def register_numeric_array(
