@@ -67,6 +67,7 @@ nav:
       - Security: reference/security.md
   - Releases:
       - Overview: releases/index.md
+      - 2.0.0a5: releases/2.0.0a5.md
       - 2.0.0a4: releases/2.0.0a4.md
       - 2.0.0a3: releases/2.0.0a3.md
       - 2.0.0a2: releases/2.0.0a2.md

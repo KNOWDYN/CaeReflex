@@ -82,6 +82,11 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "explanation": "The worker result could not be validated or exceeded the configured serialized-output limit.",
         "action": "Keep heavy data behind ArrayRef handles and reduce backend summary size.",
     },
+    "CRX-GATE5-COMPAT-001": {
+        "title": "Gate 5 backend compatibility contract violated",
+        "explanation": "A backend returned a payload that violated the frozen Gate 5 envelope, including unsafe paths, non-finite values, mismatched counts, invalid artefact references or materialised heavy arrays.",
+        "action": "Treat the deep result as failed, inspect the worker log and update the backend to caereflex.gate5.backend-result/1.0 before retrying.",
+    },
     "CRX-EXEC-SOURCE-MUTATION-001": {
         "title": "Inspected source changed during execution",
         "explanation": "Before-and-after source snapshots differed while an isolated backend was running.",

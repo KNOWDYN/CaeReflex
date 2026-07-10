@@ -21,6 +21,7 @@ from caereflex.contracts import (
     ParserAttempt,
 )
 from caereflex.core.provenance import utc_now_iso
+from caereflex.execution.compatibility import BackendCompatibilityError, freeze_backend_payload
 from caereflex.execution.context import ExecutionContext
 from caereflex.execution.registry import get_execution_backend
 
@@ -172,6 +173,12 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
         backend = get_execution_backend(request.backend_id)
         backend_version = backend.backend_version
         payload = backend.execute(request, context) or {}
+        payload = freeze_backend_payload(
+            payload,
+            request=request,
+            context=context,
+            backend_version=backend_version,
+        )
         completed_at = utc_now_iso()
         elapsed = time.monotonic() - started_clock
         execution_attempt = ParserAttempt(
@@ -211,11 +218,20 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
     except Exception as exc:
         completed_at = utc_now_iso()
         elapsed = time.monotonic() - started_clock
+        compatibility_failure = isinstance(exc, BackendCompatibilityError)
         diagnostic = DiagnosticEvent(
-            code="CRX-EXEC-BACKEND-001",
+            code="CRX-GATE5-COMPAT-001" if compatibility_failure else "CRX-EXEC-BACKEND-001",
             severity=DiagnosticSeverity.error,
-            message=f"Execution backend {request.backend_id!r} failed: {exc}",
-            parser="caereflex.execution.worker",
+            message=(
+                f"Execution backend {request.backend_id!r} violated the frozen Gate 5 contract: {exc}"
+                if compatibility_failure
+                else f"Execution backend {request.backend_id!r} failed: {exc}"
+            ),
+            parser=(
+                "caereflex.execution.compatibility"
+                if compatibility_failure
+                else "caereflex.execution.worker"
+            ),
             details={"exception_type": type(exc).__name__},
             information_lost=["native_or_deep_inspection_result"],
         )

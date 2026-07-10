@@ -8,14 +8,15 @@ CaeReflex is source-available software owned and licensed by **KNOWDYN LTD (UK)*
 
 | Version | Security support | Status |
 | --- | ---: | --- |
-| `2.0.0a4` | Supported | Active 2.x alpha line |
+| `2.0.0a5` | Supported | Active 2.x alpha line |
+| `2.0.0a4` | Critical fixes only | Superseded alpha |
 | `2.0.0a3` | Critical fixes only | Superseded alpha |
 | `2.0.0a2` | Critical fixes only | Superseded alpha |
 | `2.0.0a1` | Critical fixes only | Superseded alpha |
 | `1.0.0` | Critical fixes only | Maintenance during the alpha transition |
 | Earlier versions | Not supported | Upgrade required |
 
-The `2.0.0a4` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
+The `2.0.0a5` package uses ReflexCase schema `1.0`, backend-neutral contract `2.0-alpha.3` and frozen Gate 5 backend envelope `caereflex.gate5.backend-result/1.0`. Reports should identify all applicable versions.
 
 ## Reporting security issues
 
@@ -97,6 +98,28 @@ Deep inspection runs through a dedicated subprocess worker. The default runtime 
 - before-and-after source snapshots;
 - persistent job, result and parser-attempt records;
 - separate state and artefact directories.
+
+### Frozen backend envelope
+
+Before persistence, every execution backend is checked against the additive Gate 5 result envelope. The following built-ins are frozen at `caereflex.gate5.backend-result/1.0`:
+
+- `core.manifest-audit`;
+- `openfoam.native`;
+- `gmsh.native`;
+- `vtk.native`.
+
+The worker rejects:
+
+- non-object results or results without a summary object;
+- non-JSON or non-finite values;
+- absolute, Windows-absolute or traversal-bearing source paths;
+- array and diagnostic counts that disagree with the execution context;
+- ArrayRef or artefact handles outside the content-addressed store;
+- ArrayRef backend identities that disagree with the executing backend;
+- large raw numerical sequences under heavy-data keys;
+- excessive nesting or sequence size.
+
+A violation becomes `CRX-GATE5-COMPAT-001` and a failed execution result while the parent process remains operational. This envelope improves result integrity and cross-backend predictability; it does not make the worker a complete sandbox.
 
 ### Important limitation
 
