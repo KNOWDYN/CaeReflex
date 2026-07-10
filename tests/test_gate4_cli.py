@@ -3,6 +3,7 @@ import json
 from typer.testing import CliRunner
 
 from caereflex.cli.main import app
+from caereflex.contracts import CONTRACT_VERSION
 
 runner = CliRunner()
 
@@ -47,4 +48,4 @@ def test_doctor_reports_pint_backend():
     payload = json.loads(result.output)
     assert payload["dependencies"]["pint"] is True
     assert payload["units_backend"] == "Pint"
-    assert payload["contract_version"] == "2.0-alpha.2"
+    assert payload["contract_version"] == CONTRACT_VERSION
