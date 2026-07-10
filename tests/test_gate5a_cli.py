@@ -22,7 +22,7 @@ def test_version_and_doctor_report_alpha_runtime():
     assert report["contract_version"] == CONTRACT_VERSION
     assert report["execution_runtime"]["mode"] == "local-subprocess"
     backend_ids = {item["backend_id"] for item in report["execution_runtime"]["backends"]}
-    assert {"core.manifest-audit", "openfoam.native"}.issubset(backend_ids)
+    assert {"core.manifest-audit", "gmsh.native", "openfoam.native"}.issubset(backend_ids)
 
 
 def test_execution_backends_cli_json():
@@ -30,7 +30,7 @@ def test_execution_backends_cli_json():
     assert result.exit_code == 0
     payload = json.loads(result.output)
     backend_ids = {item["backend_id"] for item in payload["execution_backends"]}
-    assert {"core.manifest-audit", "openfoam.native"}.issubset(backend_ids)
+    assert {"core.manifest-audit", "gmsh.native", "openfoam.native"}.issubset(backend_ids)
 
 
 def test_arrays_cli_queries_registered_array(tmp_path: Path):

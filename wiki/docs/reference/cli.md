@@ -7,7 +7,7 @@ Current CLI command surface:
 | `version` | Print the package version. |
 | `doctor` | Report the Python environment, core dependencies, units backend, execution runtime, contract version, and adapter capabilities. |
 | `scan` | Build a bounded metadata-only case manifest without materialising large mesh or field arrays. |
-| `inspect` | Discover, inspect and export a case; `deep` and `forensic` profiles also invoke the Gate 5A execution runtime. |
+| `inspect` | Discover, inspect and export a case; `deep` and `forensic` profiles invoke the bounded execution runtime and a completed native backend when available. |
 | `inspect-gmsh` | Deprecated compatibility alias for Gmsh inspection. |
 | `inspect-openfoam` | Deprecated compatibility alias for OpenFOAM inspection. |
 | `inspect-vtk` | Deprecated compatibility alias for VTK inspection. |
@@ -54,43 +54,58 @@ caereflex units check "m/s" velocity --name U --json
 
 OpenFOAM dimensions are represented in the order `[mass length time temperature substance current luminosity]`. CaeReflex preserves the original vector and derives a canonical SI unit representation. That representation does not erase the distinction between pressure and incompressible kinematic pressure.
 
+Gmsh coordinates and result arrays do not establish physical units by themselves. Native Gmsh summaries therefore preserve coordinate and field units as unresolved unless another explicit evidence source supplies them.
+
 ## Bounded discovery and safe execution
 
-Use catalog mode before deep inspection:
+Use catalogue mode before deep inspection:
 
 ```bash
 caereflex doctor
-caereflex scan examples/openfoam_cavity_minimal --out manifest.json
+caereflex scan examples/openfoam_cavity_minimal --out openfoam-manifest.json
 caereflex adapters probe examples/openfoam_cavity_minimal
+caereflex scan examples/gmsh_minimal/t1.geo --out gmsh-manifest.json
+caereflex adapters probe examples/gmsh_minimal/t1.geo
 caereflex execution backends
 ```
 
 `scan` accepts resource limits including `--max-files`, `--max-depth`, `--max-bytes-read`, and `--max-wall-time`. Reaching a limit produces an explicit diagnostic and a truncated manifest; it is never presented as a complete inspection.
 
-Run the Gate 5A audit backend directly:
+Run completed native backends directly:
 
 ```bash
-caereflex execution run manifest.json \
+caereflex execution run openfoam-manifest.json \
   --source-root examples/openfoam_cavity_minimal \
-  --backend core.manifest-audit \
+  --backend openfoam.native \
+  --json
+
+caereflex execution run gmsh-manifest.json \
+  --source-root examples/gmsh_minimal/t1.geo \
+  --backend gmsh.native \
   --json
 ```
 
-The worker runs in a subprocess with parent-enforced wall time, bounded serialized output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
+The worker runs in a subprocess with parent-enforced wall time, bounded serialised output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
 
 ## Inspection with manifest, dimensions and execution evidence
 
 ```bash
 caereflex inspect examples/openfoam_cavity_minimal \
-  --adapter auto \
+  --adapter openfoam \
   --profile deep \
-  --manifest-out manifest.json \
-  --out caereflex.json \
-  --agent-context agent_context.json \
-  --report case_report.md
+  --manifest-out openfoam-manifest.json \
+  --out openfoam.caereflex.json
+
+caereflex inspect examples/gmsh_minimal/t1.geo \
+  --adapter gmsh \
+  --profile deep \
+  --manifest-out gmsh-manifest.json \
+  --out gmsh.caereflex.json
 ```
 
-In `2.0.0a1`, a deep profile records the safe `core.manifest-audit` execution. Native OpenFOAM, Gmsh and VTK readers remain deferred. The output includes `quantity_evidence`, `dimensional_checks`, execution metadata, parser attempts and diagnostics.
+OpenFOAM deep inspection uses `openfoam.native`; Gmsh deep inspection uses `gmsh.native`. VTK continues to use `core.manifest-audit` until Gate 5D. Outputs include execution metadata, ordered parser attempts, diagnostics and bounded lazy-array references.
+
+The Gmsh `.geo` path is declaration-only and never executes the script. `.msh` uses optional meshio first and the built-in MSH 2.x/4.x ASCII reader second. STEP, IGES and BREP remain fingerprint-only unless the optional Gmsh API is explicitly enabled for trusted inputs.
 
 ## Jobs and arrays
 
@@ -112,6 +127,6 @@ Commands that expose `--json` emit JSON on standard output. Human-readable statu
 
 ## Compatibility
 
-The `inspect-gmsh`, `inspect-openfoam`, and `inspect-vtk` commands remain available during the migration to the unified `inspect --adapter ...` interface. Existing schema-v1 ReflexCase payloads remain valid because Gate 5A contract extensions are additive.
+The `inspect-gmsh`, `inspect-openfoam`, and `inspect-vtk` commands remain available during the migration to the unified `inspect --adapter ...` interface. Existing schema-v1 ReflexCase payloads remain valid because Gate 5 contract extensions are additive.
 
-Successful command execution does not establish simulation validity, convergence, mesh adequacy, certification or design safety.
+Successful command execution does not establish simulation validity, geometry validity, convergence, mesh adequacy, certification or design safety.

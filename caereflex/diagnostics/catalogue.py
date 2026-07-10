@@ -112,6 +112,36 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "explanation": "The field header could be inspected, but internal values were binary, directive-bearing, malformed or unsupported.",
         "action": "Do not treat the field as numerically available. Review the attempt ledger or use a trusted reader that explicitly supports the field encoding.",
     },
+    "CRX-GMSH-READ-001": {
+        "title": "Gmsh source could not be read",
+        "explanation": "The selected Gmsh artefact could not be read within the path or byte limits of the execution plan.",
+        "action": "Confirm the manifest path and increase the read budget only for a trusted source.",
+    },
+    "CRX-GMSH-MESHIO-FALLBACK-001": {
+        "title": "meshio decoding fell back",
+        "explanation": "The optional meshio reader was installed but could not decode the selected mesh, so CaeReflex tried its bounded core ASCII reader.",
+        "action": "Review the meshio exception in the attempt ledger. Preserve the core-reader result if it decoded successfully.",
+    },
+    "CRX-GMSH-MSH-FALLBACK-001": {
+        "title": "Gmsh mesh decoding fell back to fingerprint",
+        "explanation": "Neither the optional meshio path nor the bounded MSH 2.x/4.x ASCII reader produced native mesh evidence.",
+        "action": "Treat nodes, topology, physical groups and fields as unavailable. Review the encoding and use an explicitly supported trusted reader if needed.",
+    },
+    "CRX-GMSH-GEO-PARTIAL-001": {
+        "title": "Gmsh geometry declarations only partially resolved",
+        "explanation": "The .geo file contained procedural or unsupported declarations. CaeReflex did not execute the script and preserved unresolved statements explicitly.",
+        "action": "Review the unresolved declarations or provide an exported .msh file. Do not infer the geometry produced by unexecuted script logic.",
+    },
+    "CRX-GMSH-CAD-FINGERPRINT-001": {
+        "title": "Gmsh-oriented CAD file fingerprinted only",
+        "explanation": "STEP, IGES or BREP geometry was identified and hashed but not decoded because the optional Gmsh API was not explicitly enabled.",
+        "action": "Keep the fingerprint-only evidence or explicitly enable the isolated optional API for trusted files; mesh generation remains disabled.",
+    },
+    "CRX-GMSH-API-FALLBACK-001": {
+        "title": "Optional Gmsh API inspection fell back",
+        "explanation": "The explicitly enabled isolated Gmsh API path could not inspect the file and returned to fingerprint-only evidence.",
+        "action": "Review the native-library failure and file format. Do not assume entity or topology evidence is available.",
+    },
 }
 
 

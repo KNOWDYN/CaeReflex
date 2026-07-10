@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.0a3 — Gate 5C native Gmsh inspection
+
+- Added the isolated `gmsh.native` execution backend.
+- Added optional meshio-first decoding for supported `.msh` files.
+- Added a dependency-free bounded ASCII parser for Gmsh MSH 2.x and 4.x.
+- Added node, element, entity, physical-group and mesh-bound summaries.
+- Added lazy arrays for node tags, coordinates, element tags/types, entity membership, physical membership and ragged connectivity.
+- Added `NodeData` and `ElementData` fields and meshio point/cell data as bounded lazy arrays.
+- Added safe declaration-only `.geo` inspection with restricted numeric evaluation and explicit non-execution of includes, loops, system calls, booleans and extrusions.
+- Added fingerprint-only STEP/IGES/BREP handling by default and an explicit opt-in isolated Gmsh API path that never requests mesh generation.
+- Added ordered meshio → core ASCII → fingerprint fallback records and stable Gmsh diagnostics.
+- Routed `deep` and `forensic` Gmsh inspection through the native backend.
+- Kept coordinate and field units unresolved unless supplied by evidence.
+
 ## 2.0.0a2 — Gate 5B native OpenFOAM inspection
 
 - Added the isolated `openfoam.native` execution backend.

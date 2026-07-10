@@ -65,6 +65,15 @@ def _manifest_source_root(manifest: CaseManifest, inspected_path: Path) -> Path:
     return inspected_path.resolve() if inspected_path.is_dir() else inspected_path.parent.resolve()
 
 
+def _native_backend(adapter: str) -> tuple[str, str | None]:
+    normalized = adapter.removesuffix("_adapter")
+    mapping = {
+        "gmsh": ("gmsh.native", "native_gmsh"),
+        "openfoam": ("openfoam.native", "native_openfoam"),
+    }
+    return mapping.get(normalized, ("core.manifest-audit", None))
+
+
 def _run_deep_execution(
     case: ReflexCase,
     manifest: CaseManifest,
@@ -88,7 +97,7 @@ def _run_deep_execution(
     if not plan.selected_paths:
         plan.selected_paths = [entry.path for entry in manifest.entries if not entry.is_dir][: execution_budget.max_files]
 
-    backend_id = "openfoam.native" if adapter in {"openfoam", "openfoam_adapter"} else "core.manifest-audit"
+    backend_id, metadata_key = _native_backend(adapter)
     plan.backend_candidates = list(dict.fromkeys([*plan.backend_candidates, backend_id, "core.manifest-audit"]))
     plan.metadata["native_backend_available"] = backend_id != "core.manifest-audit"
     plan.metadata["selected_backend"] = backend_id
@@ -121,8 +130,8 @@ def _run_deep_execution(
 
     case.metadata["inspection_execution"] = result.model_dump(mode="json")
     backend_result = result.metadata.get("backend_result") if isinstance(result.metadata, dict) else None
-    if isinstance(backend_result, dict) and isinstance(backend_result.get("summary"), dict):
-        case.metadata["native_openfoam"] = backend_result["summary"]
+    if metadata_key and isinstance(backend_result, dict) and isinstance(backend_result.get("summary"), dict):
+        case.metadata[metadata_key] = backend_result["summary"]
     case.array_references.extend(item.model_dump(mode="json") for item in result.arrays)
     case.diagnostics.extend(item.model_dump(mode="json") for item in result.diagnostics)
     case.provenance.append(
@@ -210,16 +219,17 @@ def inspect_with_adapter(path: str | Path, adapter: str, config: CaeReflexConfig
 
 
 def detect_adapter(path: Path) -> str:
+    gmsh_suffixes = {".geo", ".msh", ".step", ".stp", ".iges", ".igs", ".brep"}
     if path.is_dir():
         if (path / "system" / "controlDict").exists() or (path / "constant").exists() or (path / "0").exists():
             return "openfoam"
         suffixes = {file_path.suffix.lower() for file_path in path.rglob("*") if file_path.is_file()}
-        if suffixes & {".geo", ".msh", ".step", ".stp", ".iges", ".igs"}:
+        if suffixes & gmsh_suffixes:
             return "gmsh"
         if suffixes & {".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts"}:
             return "vtk"
     suffix = path.suffix.lower()
-    if suffix in {".geo", ".msh", ".step", ".stp", ".iges", ".igs"}:
+    if suffix in gmsh_suffixes:
         return "gmsh"
     if suffix in {".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts"}:
         return "vtk"

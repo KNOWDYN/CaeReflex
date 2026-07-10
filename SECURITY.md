@@ -8,11 +8,13 @@ CaeReflex is source-available software owned and licensed by **KNOWDYN LTD (UK)*
 
 | Version | Security support | Status |
 | --- | ---: | --- |
-| `2.0.0a1` | Supported | Active 2.x alpha line |
+| `2.0.0a3` | Supported | Active 2.x alpha line |
+| `2.0.0a2` | Critical fixes only | Superseded alpha |
+| `2.0.0a1` | Critical fixes only | Superseded alpha |
 | `1.0.0` | Critical fixes only | Maintenance during the alpha transition |
 | Earlier versions | Not supported | Upgrade required |
 
-The `2.0.0a1` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
+The `2.0.0a3` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
 
 ## Reporting security issues
 
@@ -78,7 +80,7 @@ CaeReflex performs read-only inspection. It must not:
 
 Agent-facing outputs use safe relative paths, identifiers or summaries rather than absolute local paths.
 
-## Gate 5A execution runtime
+## Gate 5 execution runtime
 
 Deep inspection runs through a dedicated subprocess worker. The default runtime provides:
 
@@ -89,7 +91,7 @@ Deep inspection runs through a dedicated subprocess worker. The default runtime 
 - Python-level shell and child-process guards when subprocess access is disabled;
 - POSIX address-space and CPU limits where supported;
 - parent-enforced wall-time termination;
-- bounded serialized result size;
+- bounded serialised result size;
 - selected-path containment;
 - before-and-after source snapshots;
 - persistent job, result and parser-attempt records;
@@ -99,7 +101,31 @@ Deep inspection runs through a dedicated subprocess worker. The default runtime 
 
 The default worker is **not a complete operating-system sandbox**. Native libraries can potentially bypass Python-level socket, process or filesystem guards. POSIX resource limits are unavailable or different on some platforms. Source snapshots detect mutation but cannot automatically restore a changed source.
 
-Hostile, proprietary or safety-critical inputs may require stronger external isolation such as a container, virtual machine, restricted operating-system account or institutionally managed worker. Future native backends must declare their isolation requirements honestly.
+Hostile, proprietary or safety-critical inputs may require stronger external isolation such as a container, virtual machine, restricted operating-system account or institutionally managed worker. Native backends must declare their isolation requirements honestly.
+
+## Native OpenFOAM boundary
+
+`openfoam.native` reads bounded supported ASCII mesh and field grammar only. It does not execute OpenFOAM, load solver libraries, expand includes, evaluate code streams or modify a case. Binary, directive-bearing and unsupported inputs fall back with explicit diagnostics.
+
+## Native Gmsh boundary
+
+`gmsh.native` provides three controlled paths:
+
+1. optional meshio reading for supported `.msh` files;
+2. a dependency-free bounded ASCII reader for Gmsh MSH 2.x and 4.x;
+3. declaration-only inspection for `.geo` files.
+
+The `.geo` reader does **not** invoke Gmsh or evaluate the script. Includes, loops, conditionals, functions, system calls, extrusions and boolean operations remain unresolved. Reports describe decoded declarations only and must not claim the geometry that a full Gmsh interpreter would produce.
+
+STEP, IGES and BREP files are fingerprinted by default. The optional Gmsh API path:
+
+- requires explicit opt-in through backend configuration;
+- never accepts `.geo` files;
+- runs inside the isolated worker;
+- does not call mesh-generation functions;
+- may still execute native-library code outside Python-level guards.
+
+Use stronger external isolation for untrusted CAD or mesh files. Any unintended `.geo` execution, system-call execution, mesh generation or source mutation is a security defect.
 
 ## Artefact and lazy-array security
 
@@ -121,6 +147,7 @@ CaeReflex does not expose commands or endpoints for:
 
 - OpenFOAM execution;
 - Gmsh meshing execution;
+- `.geo` script execution;
 - ParaView launch or automation;
 - general shell execution;
 - source-file mutation;
@@ -134,7 +161,7 @@ Any behaviour that enables unintended execution or mutation should be reported a
 
 CrossRef is contacted only when explicitly requested through a CrossRef command, action or `--attach-crossref` option. Ordinary discovery, inspection, deep execution, array queries and exports must not make hidden CrossRef calls.
 
-Only generated/user-supplied query strings and API parameters are sent. Raw simulation files, full case folders, proprietary artefacts, secrets and tokens must not be transmitted. CrossRef outputs are metadata and available-abstract context, not validation evidence.
+Only generated or user-supplied query strings and API parameters are sent. Raw simulation files, full case folders, proprietary artefacts, secrets and tokens must not be transmitted. CrossRef outputs are metadata and available-abstract context, not validation evidence.
 
 ## Agent-facing output safety
 
@@ -148,7 +175,7 @@ Do not place credentials, private keys, tokens, passwords or commercial licence 
 
 ## Dependency security and licensing
 
-The core install remains intentionally smaller than native-reader installations. Gmsh, meshio, VTK and PyVista are optional and governed by their own security and licence terms. Native readers introduced after Gate 5A must remain separately testable and installable.
+The core install remains intentionally smaller than native-reader installations. Gmsh, meshio, VTK and PyVista are optional and governed by their own security and licence terms. Native readers must remain separately testable and installable.
 
 Users are responsible for maintaining a secure Python environment and updating third-party dependencies according to their own policies. See `THIRD_PARTY_NOTICES.md` where applicable.
 

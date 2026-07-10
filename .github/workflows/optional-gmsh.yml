@@ -1,0 +1,97 @@
+name: Optional Gmsh Backends
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  meshio:
+    name: meshio reader
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install meshio and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[mesh,dev]"
+
+      - name: Compile package
+        run: python -m compileall -q caereflex
+
+      - name: Run optional meshio tests
+        id: meshio_tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_mesh tests/test_gate5c_gmsh_optional_meshio.py \
+            2>&1 | tee optional-meshio.log
+
+      - name: Upload meshio report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-meshio
+          path: optional-meshio.log
+          if-no-files-found: error
+
+      - name: Fail when meshio tests fail
+        if: steps.meshio_tests.outcome == 'failure'
+        run: exit 1
+
+  gmsh-api:
+    name: Gmsh API reader
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install native runtime library
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libglu1-mesa
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Gmsh and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[gmsh,dev]"
+
+      - name: Compile package
+        run: python -m compileall -q caereflex
+
+      - name: Run optional Gmsh API tests
+        id: gmsh_tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_gmsh tests/test_gate5c_gmsh_optional_api.py \
+            2>&1 | tee optional-gmsh-api.log
+
+      - name: Upload Gmsh API report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-gmsh-api
+          path: optional-gmsh-api.log
+          if-no-files-found: error
+
+      - name: Fail when Gmsh API tests fail
+        if: steps.gmsh_tests.outcome == 'failure'
+        run: exit 1
