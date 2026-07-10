@@ -4,7 +4,7 @@
 
 Computer-aided engineering (CAE) projects often leave useful evidence scattered across solver folders, mesh files, result files, scripts, notes, and literature searches. A Gmsh geometry, an OpenFOAM case, a VTK/ParaView output, and a DOI search can all describe the same engineering question, but they usually live in formats that general-purpose LLM agents cannot safely inspect or cite without help.
 
-That creates a practical gap: an engineer may have simulation cases on disk, while a Custom GPT, Claude agent, or other LLM assistant only sees a partial explanation typed into chat.
+**That creates a practical gap. An engineer may have simulation cases on disk, while a Custom GPT, Claude agent, or other LLM assistant only sees a partial explanation typed into chat.**
 
 ## What the problem impedes
 
