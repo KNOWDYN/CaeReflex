@@ -33,6 +33,10 @@ from caereflex.plugins import adapter_capabilities, get_adapter_plugin, probe_ma
 from caereflex.version import __version__
 
 EXAMPLE_NAMES = ["gmsh_minimal", "openfoam_cavity_minimal", "vtk_minimal", "crossref_context", "agent_workflow"]
+_VTK_SUFFIXES = {
+    ".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts",
+    ".pvtu", ".pvtp", ".pvti", ".pvtr", ".pvts", ".pvd", ".vtm", ".vtmb",
+}
 
 
 def scan_path(
@@ -70,6 +74,7 @@ def _native_backend(adapter: str) -> tuple[str, str | None]:
     mapping = {
         "gmsh": ("gmsh.native", "native_gmsh"),
         "openfoam": ("openfoam.native", "native_openfoam"),
+        "vtk": ("vtk.native", "native_vtk"),
     }
     return mapping.get(normalized, ("core.manifest-audit", None))
 
@@ -226,12 +231,12 @@ def detect_adapter(path: Path) -> str:
         suffixes = {file_path.suffix.lower() for file_path in path.rglob("*") if file_path.is_file()}
         if suffixes & gmsh_suffixes:
             return "gmsh"
-        if suffixes & {".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts"}:
+        if suffixes & _VTK_SUFFIXES:
             return "vtk"
     suffix = path.suffix.lower()
     if suffix in gmsh_suffixes:
         return "gmsh"
-    if suffix in {".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts"}:
+    if suffix in _VTK_SUFFIXES:
         return "vtk"
     raise UnsupportedFormatError(f"Could not detect adapter for {path}")
 
