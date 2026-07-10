@@ -121,6 +121,19 @@ def _compact_result_failure(
     )
 
 
+def _backend_status(payload: dict[str, Any]) -> ExecutionStatus:
+    raw_status = payload.pop("_execution_status", ExecutionStatus.success.value)
+    try:
+        status = ExecutionStatus(raw_status)
+    except ValueError as exc:
+        raise ValueError(f"Backend returned unsupported execution status: {raw_status!r}") from exc
+    if status not in {ExecutionStatus.success, ExecutionStatus.partial_success}:
+        raise ValueError(
+            "A backend may return only success or partial_success; terminal failures must raise an exception."
+        )
+    return status
+
+
 def run_worker(request_path: str | Path, result_path: str | Path) -> int:
     request = InspectionExecutionRequest.model_validate_json(Path(request_path).read_text(encoding="utf-8"))
     started_at = utc_now_iso()
@@ -135,6 +148,7 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
         backend = get_execution_backend(request.backend_id)
         backend_version = backend.backend_version
         payload = backend.execute(request, context) or {}
+        status = _backend_status(payload)
         completed_at = utc_now_iso()
         elapsed = time.monotonic() - started_clock
         execution_attempt = ParserAttempt(
@@ -146,7 +160,7 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
             started_at=started_at,
             completed_at=completed_at,
             elapsed_seconds=elapsed,
-            metadata={"policy_enforcement": guard_metadata},
+            metadata={"policy_enforcement": guard_metadata, "execution_status": status.value},
         )
         attempts = context.attempts or [execution_attempt]
         result = InspectionExecutionResult(
@@ -155,7 +169,7 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
             plugin_id=request.plan.plugin_id,
             backend_id=request.backend_id,
             backend_version=backend_version,
-            status=ExecutionStatus.success,
+            status=status,
             started_at=started_at,
             completed_at=completed_at,
             elapsed_seconds=elapsed,
@@ -244,7 +258,7 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
     temporary = destination.with_suffix(destination.suffix + ".tmp")
     temporary.write_bytes(serialized)
     os.replace(temporary, destination)
-    return 0 if result.status == ExecutionStatus.success else 1
+    return 0 if result.status in {ExecutionStatus.success, ExecutionStatus.partial_success} else 1
 
 
 def main() -> int:
