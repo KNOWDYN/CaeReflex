@@ -1,33 +1,91 @@
 from __future__ import annotations
+from importlib import util as importlib_util
 from pathlib import Path
-import json, shutil
+import platform
 from typing import Any
+
+from caereflex.contracts import CONTRACT_VERSION, CaseManifest, InspectionBudget, InspectionProfile
 from caereflex.core.config import CaeReflexConfig
-from caereflex.core.models import ReflexCase, InspectionFlag, Severity
-from caereflex.core.errors import UnsupportedFormatError, PathSafetyError
-from caereflex.core.validation import assert_safe_workspace_path
+from caereflex.core.models import ReflexCase
+from caereflex.core.errors import UnsupportedFormatError
 from caereflex.adapters.gmsh import GmshAdapter
 from caereflex.adapters.openfoam import OpenFOAMAdapter
 from caereflex.adapters.vtk import VTKAdapter
+from caereflex.discovery import CatalogStore, scan_case
 from caereflex.evidence.crossref import attach_crossref as _attach_crossref, search_crossref as _search_crossref
 from caereflex.exporters import (
     export_reflexcase_json, export_agent_context_json, export_agent_context_md,
     export_markdown_report, export_bibtex, load_reflexcase
 )
+from caereflex.plugins import adapter_capabilities, probe_manifest
+from caereflex.version import __version__
 
 EXAMPLE_NAMES = ["gmsh_minimal", "openfoam_cavity_minimal", "vtk_minimal", "crossref_context", "agent_workflow"]
 
 
-def inspect_path(path: str | Path, adapter: str = 'auto', config: CaeReflexConfig | None = None,
-                 attach_crossref: bool = False, crossref_kwargs: dict[str, Any] | None = None) -> ReflexCase:
+def scan_path(
+    path: str | Path,
+    *,
+    profile: InspectionProfile | str = InspectionProfile.catalog,
+    budget: InspectionBudget | None = None,
+    cache_path: str | Path | None = None,
+    use_cache: bool = True,
+) -> tuple[CaseManifest, dict[str, list[str]]]:
+    manifest = scan_case(path, profile=profile, budget=budget)
+    diff = {"added": [entry.path for entry in manifest.entries], "removed": [], "changed": [], "unchanged": []}
+    if cache_path:
+        store = CatalogStore(cache_path)
+        previous = store.load(manifest.root_uri) if use_cache else None
+        change = store.diff(previous, manifest)
+        diff = change.model_dump(mode="json")
+        if use_cache:
+            store.save(manifest)
+    return manifest, diff
+
+
+def inspect_path(
+    path: str | Path,
+    adapter: str = 'auto',
+    config: CaeReflexConfig | None = None,
+    attach_crossref: bool = False,
+    crossref_kwargs: dict[str, Any] | None = None,
+    *,
+    profile: InspectionProfile | str = InspectionProfile.standard,
+    manifest: CaseManifest | None = None,
+    discover: bool = True,
+) -> ReflexCase:
     config = config or CaeReflexConfig()
     p = Path(path)
+    profile = InspectionProfile(profile)
+    if discover and manifest is None:
+        budget = InspectionBudget(
+            max_files=config.max_scan_files,
+            max_depth=config.max_scan_depth,
+            max_bytes_read=config.max_file_size_bytes,
+        )
+        manifest = scan_case(p, profile=profile, budget=budget)
     if adapter == 'auto':
-        adapter = detect_adapter(p)
+        if manifest is not None:
+            probes = [result for result in probe_manifest(manifest) if result.supported]
+            adapter = probes[0].plugin_id if probes else detect_adapter(p)
+        else:
+            adapter = detect_adapter(p)
     result = inspect_with_adapter(p, adapter, config=config)
     if result.case is None:
         raise UnsupportedFormatError("No ReflexCase returned by adapter.")
     case = result.case
+    case.contract_version = CONTRACT_VERSION
+    case.inspection_profile = profile.value
+    if manifest is not None:
+        case.case_manifest = manifest.model_dump(mode="json")
+        case.diagnostics = [item.model_dump(mode="json") for item in manifest.diagnostics]
+        case.workspace.file_count_considered = len(manifest.entries)
+        case.workspace.scan_depth = max((entry.depth for entry in manifest.entries), default=0)
+        case.workspace.limits = {
+            "truncated": manifest.truncated,
+            "limits_reached": manifest.limits_reached,
+        }
+        case.metadata["adapter_probe"] = [item.model_dump(mode="json") for item in probe_manifest(manifest)]
     if attach_crossref:
         case = _attach_crossref(case, **(crossref_kwargs or {}))
     return case
@@ -57,6 +115,33 @@ def detect_adapter(path: Path) -> str:
     if suf in {'.geo', '.msh', '.step', '.stp', '.iges', '.igs'}: return 'gmsh'
     if suf in {'.vtk', '.vtu', '.vtp', '.vti', '.vtr', '.vts'}: return 'vtk'
     raise UnsupportedFormatError(f"Could not detect adapter for {path}")
+
+
+def doctor_report() -> dict[str, Any]:
+    dependencies = {
+        name: importlib_util.find_spec(module) is not None
+        for name, module in {
+            "pydantic": "pydantic",
+            "typer": "typer",
+            "rich": "rich",
+            "fsspec": "fsspec",
+            "meshio": "meshio",
+            "gmsh": "gmsh",
+            "pyvista": "pyvista",
+            "vtk": "vtk",
+            "fastapi": "fastapi",
+            "uvicorn": "uvicorn",
+        }.items()
+    }
+    return {
+        "status": "success",
+        "caereflex_version": __version__,
+        "contract_version": CONTRACT_VERSION,
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "dependencies": dependencies,
+        "adapters": [item.model_dump(mode="json") for item in adapter_capabilities()],
+    }
 
 
 def search_crossref(case_or_path: ReflexCase | str | Path, **kwargs: Any):
