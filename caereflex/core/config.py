@@ -31,7 +31,7 @@ class CaeReflexConfig(BaseModel):
 
     @property
     def execution_state_dir(self) -> Path:
-        return (self.state_dir or (self.workspace_dir / ".caereflex")).expanduser().resolve()
+        return (self.state_dir or (Path.home() / ".caereflex")).expanduser().resolve()
 
     @property
     def max_execution_memory_bytes(self) -> int:
