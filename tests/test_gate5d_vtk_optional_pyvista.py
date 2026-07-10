@@ -19,12 +19,7 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
     source.mkdir()
     vtk_path = source / "tetra.vtu"
     points = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
-        ],
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
         dtype=float,
     )
     cells = np.array([4, 0, 1, 2, 3], dtype=np.int64)
@@ -37,14 +32,12 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
     manifest = CaseManifest(
         manifest_id="manifest_vtk_pyvista_optional",
         root_uri=source.as_uri(),
-        entries=[
-            ManifestEntry(
-                path=vtk_path.name,
-                size_bytes=vtk_path.stat().st_size,
-                format_hint="vtk-xml",
-                case_hint="vtk",
-            )
-        ],
+        entries=[ManifestEntry(
+            path=vtk_path.name,
+            size_bytes=vtk_path.stat().st_size,
+            format_hint="vtk-xml",
+            case_hint="vtk",
+        )],
         detected_formats=["vtk-xml"],
         case_hints=["vtk"],
     )
@@ -64,9 +57,14 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
     )
 
     assert result.status == "success"
+    pyvista_failed = [
+        attempt.exception_message
+        for attempt in result.attempts
+        if attempt.backend_id == "vtk.pyvista" and attempt.outcome == "failed"
+    ]
+    assert not pyvista_failed, pyvista_failed
     dataset = result.metadata["backend_result"]["summary"]["files"][0]
-    pyvista_attempts = [attempt.model_dump(mode="json") for attempt in result.attempts if attempt.backend_id == "vtk.pyvista"]
-    assert dataset.get("reader") == "vtk.pyvista", {"dataset": dataset, "pyvista_attempts": pyvista_attempts}
+    assert dataset.get("reader") == "vtk.pyvista"
     assert dataset["point_count"] == 4
     assert dataset["cell_count"] == 1
     assert dataset["dimension"] == 3
