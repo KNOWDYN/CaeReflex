@@ -58,7 +58,7 @@ def test_explicit_gmsh_api_inspects_brep_without_mesh_generation(tmp_path: Path)
 
     assert result.status == "success"
     model = result.metadata["backend_result"]["summary"]["files"][0]
-    assert model["reader"] == "gmsh-api"
+    assert model.get("reader") == "gmsh-api", result.model_dump_json(indent=2)
     assert model["mesh_generation_requested"] is False
     assert model["entity_count"] > 0
     assert model["dimension"] == 3
