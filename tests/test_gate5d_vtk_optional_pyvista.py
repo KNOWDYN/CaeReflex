@@ -65,7 +65,8 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
 
     assert result.status == "success"
     dataset = result.metadata["backend_result"]["summary"]["files"][0]
-    assert dataset["reader"] == "vtk.pyvista"
+    pyvista_attempts = [attempt.model_dump(mode="json") for attempt in result.attempts if attempt.backend_id == "vtk.pyvista"]
+    assert dataset.get("reader") == "vtk.pyvista", {"dataset": dataset, "pyvista_attempts": pyvista_attempts}
     assert dataset["point_count"] == 4
     assert dataset["cell_count"] == 1
     assert dataset["dimension"] == 3
