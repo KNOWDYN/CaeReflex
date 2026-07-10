@@ -22,6 +22,11 @@ from caereflex.contracts import (
 PLUGIN_GROUP = "caereflex.adapters"
 _TIME_RE = re.compile(r"^(?:0|[1-9]\d*)(?:\.\d+)?$")
 _GMSH_SUFFIXES = {".geo", ".msh", ".step", ".stp", ".iges", ".igs", ".brep"}
+_VTK_SUFFIXES = {
+    ".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts",
+    ".pvtu", ".pvtp", ".pvti", ".pvtr", ".pvts",
+    ".pvd", ".vtm", ".vtmb",
+}
 
 
 @dataclass(frozen=True)
@@ -90,6 +95,26 @@ class BuiltinAdapterPlugin:
                     "cad_api_policy": "explicit-opt-in-no-mesh-generation",
                 },
             )
+        if self.plugin_id == "vtk":
+            paths = [
+                entry.path
+                for entry in manifest.entries
+                if not entry.is_dir and PurePosixPath(entry.path).suffix.lower() in _VTK_SUFFIXES
+            ]
+            return InspectionPlan(
+                plugin_id=self.plugin_id,
+                profile=profile,
+                selected_paths=paths[: budget.max_files],
+                budget=budget,
+                backend_candidates=["vtk.native", "core.manifest-audit"],
+                operation="native_vtk_inspection",
+                metadata={
+                    "reader_policy": "pyvista-first-meshio-core-fallback",
+                    "legacy_policy": "ascii-core-binary-optional-reader",
+                    "xml_policy": "inline-core-appended-compressed-optional-reader",
+                    "collection_policy": "reference-and-time-inventory-only",
+                },
+            )
         paths = [
             entry.path
             for entry in manifest.entries
@@ -111,12 +136,7 @@ _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
             field_support="node-data-element-data-and-meshio-point-cell-data",
             time_series_support=True,
             units_support="coordinate-and-field-units-unresolved-unless-supplied",
-            fallback_modes=[
-                "meshio",
-                "core-ascii-msh",
-                "geo-declaration-summary",
-                "cad-fingerprint-only",
-            ],
+            fallback_modes=["meshio", "core-ascii-msh", "geo-declaration-summary", "cad-fingerprint-only"],
             optional_dependencies=["meshio", "gmsh"],
             licence="CaeReflex core; optional backend licences vary",
         ),
@@ -135,12 +155,7 @@ _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
             field_support="native-ascii-uniform-and-nonuniform-internal-fields",
             time_series_support=True,
             units_support="seven-component-dimension-vector-and-Pint-validation",
-            fallback_modes=[
-                "field-header-and-dimensions",
-                "structured-metadata",
-                "raw-text-with-diagnostic",
-                "fingerprint-only",
-            ],
+            fallback_modes=["field-header-and-dimensions", "structured-metadata", "raw-text-with-diagnostic", "fingerprint-only"],
             optional_dependencies=[],
             licence="CaeReflex Research Source Licence; Pint is BSD-licensed core dependency",
         ),
@@ -149,17 +164,20 @@ _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
     ),
     BuiltinAdapterPlugin(
         plugin_id="vtk",
-        plugin_version="1.0.0",
+        plugin_version="1.2.0",
         _capabilities=AdapterCapabilities(
             plugin_id="vtk",
-            plugin_version="1.0.0",
+            plugin_version="1.2.0",
             formats=["vtk-legacy", "vtk-xml", "vtk-collection"],
-            geometry_support="dataset-bounds-planned",
-            topology_support="legacy-header-summary",
-            field_support="legacy-scalar-vector-summary",
-            time_series_support=False,
-            units_support="metadata-only",
-            fallback_modes=["legacy-header", "fingerprint-only"],
+            geometry_support="points-bounds-structured-extents-and-rectilinear-coordinates",
+            topology_support="pyvista-meshio-and-core-legacy-xml-connectivity",
+            field_support="point-cell-field-data-with-lazy-array-references",
+            time_series_support=True,
+            units_support="coordinate-and-field-units-unresolved-unless-supplied",
+            fallback_modes=[
+                "pyvista-vtk", "meshio", "core-legacy-ascii", "core-xml-inline",
+                "collection-reference-inventory", "fingerprint-only",
+            ],
             optional_dependencies=["pyvista", "vtk", "meshio"],
             licence="CaeReflex core; optional backend licences vary",
         ),
