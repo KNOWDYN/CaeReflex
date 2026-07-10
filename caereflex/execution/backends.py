@@ -129,6 +129,10 @@ class TestExecutionBackend:
             return {"summary": {"source_path": "../outside/case.msh"}}
         elif mode == "heavy_payload":
             return {"summary": {"values": list(range(300))}}
+        elif mode == "mismatched_array_count_payload":
+            return {"summary": {"array_count": 1}}
+        elif mode == "mismatched_diagnostic_count_payload":
+            return {"summary": {"diagnostic_count": 1}}
         return {"summary": {"mode": mode}}
 
 
