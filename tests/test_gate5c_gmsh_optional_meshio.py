@@ -68,7 +68,7 @@ def test_optional_meshio_path_decodes_gmsh_mesh_and_data(tmp_path: Path):
 
     assert result.status == "success"
     mesh_summary = result.metadata["backend_result"]["summary"]["files"][0]
-    assert mesh_summary["reader"] == "meshio"
+    assert mesh_summary.get("reader") == "meshio", result.model_dump_json(indent=2)
     assert mesh_summary["node_count"] == 4
     assert mesh_summary["element_count"] == 2
     assert mesh_summary["bounds"] == [[0.0, 1.0], [0.0, 1.0], [0.0, 0.0]]
