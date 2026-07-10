@@ -31,26 +31,63 @@ def _deny(message: str):
     return denied
 
 
+def _blocked_socket_type(message: str):
+    """Return a socket-compatible type that blocks construction.
+
+    Replacing ``socket.socket`` with a plain function breaks imports that subclass the
+    socket type, including SSL/native-reader dependencies. A subclass preserves the
+    public type contract while denying every attempted socket construction.
+    """
+
+    original_socket = socket.socket
+
+    class PolicyBlockedSocket(original_socket):
+        def __new__(cls, *args: Any, **kwargs: Any):
+            raise PermissionError(message)
+
+    PolicyBlockedSocket.__name__ = "PolicyBlockedSocket"
+    PolicyBlockedSocket.__qualname__ = "PolicyBlockedSocket"
+    return PolicyBlockedSocket
+
+
+def _blocked_popen_type(message: str):
+    """Return a Popen-compatible type that blocks child-process creation."""
+
+    original_popen = subprocess.Popen
+
+    class PolicyBlockedPopen(original_popen):
+        def __new__(cls, *args: Any, **kwargs: Any):
+            raise PermissionError(message)
+
+    PolicyBlockedPopen.__name__ = "PolicyBlockedPopen"
+    PolicyBlockedPopen.__qualname__ = "PolicyBlockedPopen"
+    return PolicyBlockedPopen
+
+
 def _apply_python_guards(request: InspectionExecutionRequest) -> dict[str, str]:
     enforcement: dict[str, str] = {}
     if not request.policy.allow_network:
-        denied_socket = _deny("Network access is disabled by the CaeReflex execution policy.")
-        socket.socket = denied_socket  # type: ignore[assignment]
+        message = "Network access is disabled by the CaeReflex execution policy."
+        denied_socket = _deny(message)
+        socket.socket = _blocked_socket_type(message)  # type: ignore[assignment]
         socket.create_connection = denied_socket  # type: ignore[assignment]
-        enforcement["network"] = "python-socket-guard"
+        if hasattr(socket, "socketpair"):
+            socket.socketpair = denied_socket  # type: ignore[assignment]
+        enforcement["network"] = "python-socket-type-guard"
     else:
         enforcement["network"] = "allowed"
 
     if not request.policy.allow_subprocess:
-        denied_process = _deny("Child-process creation is disabled by the CaeReflex execution policy.")
-        subprocess.Popen = denied_process  # type: ignore[assignment]
+        message = "Child-process creation is disabled by the CaeReflex execution policy."
+        denied_process = _deny(message)
+        subprocess.Popen = _blocked_popen_type(message)  # type: ignore[assignment]
         subprocess.run = denied_process  # type: ignore[assignment]
         subprocess.call = denied_process  # type: ignore[assignment]
         subprocess.check_call = denied_process  # type: ignore[assignment]
         subprocess.check_output = denied_process  # type: ignore[assignment]
         os.system = denied_process  # type: ignore[assignment]
         os.popen = denied_process  # type: ignore[assignment]
-        enforcement["subprocess"] = "python-process-guard"
+        enforcement["subprocess"] = "python-process-type-guard"
     else:
         enforcement["subprocess"] = "allowed"
     return enforcement
