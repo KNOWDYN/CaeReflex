@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased — CaeReflex 2.x foundation
+## 2.0.0a1 — Gate 5A execution foundation
+
+### Gate 5A — Safe execution, artefacts and lazy arrays
+
+- Aligned the package release line with the 2.0 alpha contracts.
+- Added a bounded subprocess executor for deep-inspection backends.
+- Added execution policies, persistent job records and parser-attempt ledgers.
+- Added timeout, crash, invalid-result and source-mutation diagnostics.
+- Added an immutable SHA-256 content-addressed local artefact store.
+- Extended `ArrayRef` additively with semantic, provenance, backend and lifecycle metadata.
+- Added a dependency-light raw numeric array provider with bounded describe, sample, slice and reduction operations.
+- Added `execution`, `arrays` and `jobs` CLI command groups.
+- Added a safe `core.manifest-audit` backend for exercising the runtime before native readers are introduced.
+- Integrated the execution foundation with `deep` and `forensic` inspection profiles without adding native OpenFOAM, Gmsh or VTK decoding.
 
 ### Gate 4 — Dimensions, units and physics semantics
 
