@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0a2 — Gate 5B native OpenFOAM inspection
+
+- Added the isolated `openfoam.native` execution backend.
+- Added bounded ASCII decoding for `polyMesh/points`, `faces`, `owner`, `neighbour` and `boundary`.
+- Added point bounds, face/cell counts, internal-face counts and patch ranges.
+- Added time-directory inventory and field availability by time.
+- Added lazy `ArrayRef` registration for mesh coordinates, topology, ownership and supported field values.
+- Added scalar, vector and common tensor field handling for uniform and nonuniform ASCII internal fields.
+- Preserved Gate 4 dimensions in native field summaries and array metadata.
+- Added explicit binary/directive/unsupported-grammar fallbacks with ordered parser-attempt records.
+- Routed `deep` and `forensic` OpenFOAM inspection through the native reader while retaining `core.manifest-audit` for other adapters.
+- Kept the core install dependency-light; no OpenFOAM installation or solver execution is required.
+
 ## 2.0.0a1 — Gate 5A execution foundation
 
 ### Gate 5A — Safe execution, artefacts and lazy arrays
