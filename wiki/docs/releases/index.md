@@ -2,6 +2,7 @@
 
 Release pages are frozen summaries for package releases.
 
+- [2.0.0a2](2.0.0a2.md) — Gate 5B native OpenFOAM ASCII reader.
 - [2.0.0a1](2.0.0a1.md) — Gate 5A execution foundation.
 - [1.0.0](1.0.0.md) — Initial public release.
 
