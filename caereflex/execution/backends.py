@@ -111,11 +111,24 @@ class TestExecutionBackend:
                 dtype=str(request.backend_options.get("dtype", "float64")),
                 shape=shape,
                 source_asset_id="fixture_asset",
+                source_path="input.dat",
                 association="field",
                 component_names=list(request.backend_options.get("component_names", [])),
                 metadata={"fixture": True},
             )
             return {"summary": {"array_id": ref.array_id}}
+        elif mode == "invalid_payload":
+            return ["not", "a", "mapping"]  # type: ignore[return-value]
+        elif mode == "missing_summary_payload":
+            return {"value": 1}
+        elif mode == "nonfinite_payload":
+            return {"summary": {"value": float("nan")}}
+        elif mode == "absolute_path_payload":
+            return {"summary": {"source_path": "/private/engineering/case.msh"}}
+        elif mode == "traversal_path_payload":
+            return {"summary": {"source_path": "../outside/case.msh"}}
+        elif mode == "heavy_payload":
+            return {"summary": {"values": list(range(300))}}
         return {"summary": {"mode": mode}}
 
 
