@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
 import struct
 from functools import reduce
@@ -62,6 +63,11 @@ def _dtype(dtype: str) -> tuple[str, int]:
         raise ArrayQueryError(f"Unsupported core raw-array dtype: {dtype}") from exc
 
 
+def _expected_payload_bytes(ref: ArrayRef) -> int:
+    _, item_size = _dtype(ref.dtype)
+    return _element_count(ref.shape) * item_size
+
+
 class ArrayService:
     def __init__(self, state_root: str | Path = ".caereflex", *, max_elements_returned: int = 10_000) -> None:
         if max_elements_returned <= 0:
@@ -72,8 +78,10 @@ class ArrayService:
         self._initialise()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.database_path)
+        connection = sqlite3.connect(self.database_path, timeout=30.0)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 5000")
         return connection
 
     def _initialise(self) -> None:
@@ -112,6 +120,9 @@ class ArrayService:
     ) -> ArrayRef:
         format_character, _ = _dtype(dtype)
         prefix = _byte_order_prefix(byte_order)
+        names = component_names or []
+        if names and (len(shape) < 2 or len(names) != shape[-1]):
+            raise ArrayQueryError("component_names must match the final declared shape dimension")
         materialized = list(values)
         expected = _element_count(shape)
         if expected != len(materialized):
@@ -134,7 +145,7 @@ class ArrayService:
             "source_asset_id": source_asset_id,
             "source_path": source_path,
             "association": association,
-            "component_names": component_names or [],
+            "component_names": names,
             "quantity_evidence_ref": quantity_evidence_ref,
             "coordinate_frame_ref": coordinate_frame_ref,
             "time_index": time_index,
@@ -155,7 +166,7 @@ class ArrayService:
             source_asset_id=source_asset_id,
             source_path=source_path,
             association=association,
-            component_names=component_names or [],
+            component_names=names,
             quantity_evidence_ref=quantity_evidence_ref,
             coordinate_frame_ref=coordinate_frame_ref,
             time_index=time_index,
@@ -174,9 +185,19 @@ class ArrayService:
             raise ArrayQueryError("ArrayRef.array_id is required for registry storage.")
         try:
             digest = self.store.digest_from_uri(ref.uri)
-            self.store.resolve(ref.uri)
+            path = self.store.resolve(ref.uri)
         except ArtifactStoreError as exc:
             raise ArrayQueryError(f"Array artefact could not be registered: {exc}") from exc
+        if ref.checksum and ref.checksum != f"sha256:{digest}":
+            raise ArrayQueryError("ArrayRef checksum does not match its content-addressed artefact URI")
+        if ref.format == "caereflex.raw.v1":
+            expected_size = _expected_payload_bytes(ref)
+            if path.stat().st_size != expected_size:
+                raise ArrayQueryError(
+                    f"Raw array payload size {path.stat().st_size} does not match declared shape/dtype size {expected_size}."
+                )
+            if ref.component_names and (len(ref.shape) < 2 or len(ref.component_names) != ref.shape[-1]):
+                raise ArrayQueryError("component_names must match the final declared shape dimension")
         with self._connect() as connection:
             connection.execute(
                 """
@@ -211,13 +232,18 @@ class ArrayService:
         self._require_operation(ref, "describe")
         path = self._resolve_artifact(ref)
         artifact = self.store.get(ref.uri)
+        expected_size = _expected_payload_bytes(ref)
+        if path.stat().st_size != expected_size:
+            raise ArrayQueryError("Array payload size no longer matches the registered shape and dtype")
         return {
             **ref.model_dump(mode="json"),
             "element_count": _element_count(ref.shape),
             "size_bytes": artifact.size_bytes,
+            "expected_size_bytes": expected_size,
             "artifact_id": artifact.artifact_id,
             "resolved_filename": path.name,
             "integrity_verified": True,
+            "payload_size_matches_shape": True,
         }
 
     def slice(self, array_id: str, start: int, stop: int, step: int = 1) -> dict[str, Any]:
@@ -267,25 +293,31 @@ class ArrayService:
                 raise ArrayQueryError("component is outside the declared component axis")
 
         selected_count = 0
-        total_value = 0.0
+        finite_count = 0
+        non_finite_count = 0
+        total_value: int | float = 0
         minimum: float | int | bool | None = None
         maximum: float | int | bool | None = None
         for index, value in enumerate(self._iter_values(ref)):
             if component is not None and index % component_count != component:
                 continue
             selected_count += 1
-            total_value += float(value)
+            if isinstance(value, float) and not math.isfinite(value):
+                non_finite_count += 1
+                continue
+            finite_count += 1
+            total_value += value
             minimum = value if minimum is None or value < minimum else minimum
             maximum = value if maximum is None or value > maximum else maximum
 
         if operation == "count":
             result: int | float | bool | None = selected_count
-        elif selected_count == 0:
+        elif finite_count == 0:
             result = None
         elif operation == "sum":
             result = total_value
         elif operation == "mean":
-            result = total_value / selected_count
+            result = total_value / finite_count
         elif operation == "min":
             result = minimum
         else:
@@ -295,6 +327,8 @@ class ArrayService:
             "operation": operation,
             "component": component,
             "count": selected_count,
+            "finite_count": finite_count,
+            "non_finite_count": non_finite_count,
             "value": result,
         }
 
