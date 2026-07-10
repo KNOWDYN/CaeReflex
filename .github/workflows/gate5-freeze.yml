@@ -1,0 +1,58 @@
+name: Gate 5 Freeze
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    name: Compatibility and malformed inputs — Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install core and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Compile execution package
+        run: python -m compileall -q caereflex/execution caereflex/diagnostics
+
+      - name: Run Gate 5 freeze tests
+        id: tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short \
+            tests/test_gate5_freeze_compatibility.py \
+            tests/test_gate5_malformed_inputs.py \
+            2>&1 | tee gate5-freeze-${{ matrix.python-version }}.log
+
+      - name: Upload Gate 5 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate5-freeze-${{ matrix.python-version }}
+          path: gate5-freeze-${{ matrix.python-version }}.log
+          if-no-files-found: error
+
+      - name: Fail when Gate 5 tests fail
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
