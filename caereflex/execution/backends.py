@@ -1,7 +1,7 @@
 """Built-in safe execution backends.
 
-Gate 5A ships only a metadata audit backend. Native OpenFOAM, Gmsh and VTK readers
-are intentionally deferred to later PRs.
+Gate 5B adds the first production native reader: a bounded, read-only OpenFOAM
+ASCII backend. Gmsh and VTK native readers remain deferred to later PRs.
 """
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from typing import Any
 from caereflex.contracts import AttemptOutcome, InspectionExecutionRequest, ParserAttempt
 from caereflex.core.provenance import utc_now_iso
 from caereflex.execution.context import ExecutionContext
+from caereflex.openfoam_native import OpenFOAMNativeBackend
 
 
 class ManifestAuditBackend:
@@ -113,5 +114,6 @@ class TestExecutionBackend:
 
 BUILTIN_BACKENDS = {
     ManifestAuditBackend.backend_id: ManifestAuditBackend,
+    OpenFOAMNativeBackend.backend_id: OpenFOAMNativeBackend,
     TestExecutionBackend.backend_id: TestExecutionBackend,
 }
