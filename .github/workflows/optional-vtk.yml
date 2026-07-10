@@ -31,7 +31,18 @@ jobs:
         run: python -m compileall -q caereflex
 
       - name: Run optional meshio VTK tests
-        run: python -m pytest -q --tb=short -m optional_mesh tests/test_gate5d_vtk_optional_meshio.py
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_mesh tests/test_gate5d_vtk_optional_meshio.py \
+            2>&1 | tee optional-meshio-vtk.log
+
+      - name: Upload meshio VTK report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-meshio-vtk
+          path: optional-meshio-vtk.log
+          if-no-files-found: error
 
   pyvista:
     name: PyVista VTK reader
@@ -57,4 +68,15 @@ jobs:
       - name: Run optional PyVista VTK tests
         env:
           PYVISTA_OFF_SCREEN: "true"
-        run: python -m pytest -q --tb=short -m optional_vtk tests/test_gate5d_vtk_optional_pyvista.py
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short -m optional_vtk tests/test_gate5d_vtk_optional_pyvista.py \
+            2>&1 | tee optional-pyvista-vtk.log
+
+      - name: Upload PyVista VTK report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-pyvista-vtk
+          path: optional-pyvista-vtk.log
+          if-no-files-found: error
