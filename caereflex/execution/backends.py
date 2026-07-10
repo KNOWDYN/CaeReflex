@@ -10,6 +10,7 @@ from typing import Any
 from caereflex.contracts import AttemptOutcome, InspectionExecutionRequest, ParserAttempt
 from caereflex.core.provenance import utc_now_iso
 from caereflex.execution.context import ExecutionContext
+from caereflex.execution.gmsh_native import GmshNativeBackend
 from caereflex.execution.openfoam_native import OpenFOAMNativeBackend
 
 
@@ -110,6 +111,7 @@ class TestExecutionBackend:
 
 BUILTIN_BACKENDS = {
     ManifestAuditBackend.backend_id: ManifestAuditBackend,
+    GmshNativeBackend.backend_id: GmshNativeBackend,
     OpenFOAMNativeBackend.backend_id: OpenFOAMNativeBackend,
     TestExecutionBackend.backend_id: TestExecutionBackend,
 }
