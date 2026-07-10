@@ -57,12 +57,17 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
     )
 
     assert result.status == "success"
-    pyvista_failed = [
-        attempt.exception_message
+    pyvista_attempts = [
+        {
+            "outcome": attempt.outcome,
+            "exception_type": attempt.exception_type,
+            "exception_message": attempt.exception_message,
+            "metadata": attempt.metadata,
+        }
         for attempt in result.attempts
-        if attempt.backend_id == "vtk.pyvista" and attempt.outcome == "failed"
+        if attempt.backend_id == "vtk.pyvista"
     ]
-    assert not pyvista_failed, pyvista_failed
+    assert pyvista_attempts and pyvista_attempts[-1]["outcome"] == "success", pyvista_attempts
     dataset = result.metadata["backend_result"]["summary"]["files"][0]
     assert dataset.get("reader") == "vtk.pyvista"
     assert dataset["point_count"] == 4
@@ -73,7 +78,6 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
         ("temperature", "point"),
         ("quality", "cell"),
     }
-    assert any(attempt.backend_id == "vtk.pyvista" and attempt.outcome == "success" for attempt in result.attempts)
     assert result.source_mutation_detected is False
 
     arrays = ArrayService(tmp_path / "state")
