@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import sqlite3
 import struct
 from functools import reduce
@@ -173,8 +172,11 @@ class ArrayService:
     def register_ref(self, ref: ArrayRef) -> ArrayRef:
         if not ref.array_id:
             raise ArrayQueryError("ArrayRef.array_id is required for registry storage.")
-        digest = self.store.digest_from_uri(ref.uri)
-        self.store.resolve(ref.uri)
+        try:
+            digest = self.store.digest_from_uri(ref.uri)
+            self.store.resolve(ref.uri)
+        except ArtifactStoreError as exc:
+            raise ArrayQueryError(f"Array artefact could not be registered: {exc}") from exc
         with self._connect() as connection:
             connection.execute(
                 """
@@ -207,12 +209,14 @@ class ArrayService:
     def describe(self, array_id: str) -> dict[str, Any]:
         ref = self.get(array_id)
         self._require_operation(ref, "describe")
+        path = self._resolve_artifact(ref)
         artifact = self.store.get(ref.uri)
         return {
             **ref.model_dump(mode="json"),
             "element_count": _element_count(ref.shape),
             "size_bytes": artifact.size_bytes,
             "artifact_id": artifact.artifact_id,
+            "resolved_filename": path.name,
             "integrity_verified": True,
         }
 
@@ -307,10 +311,16 @@ class ArrayService:
                 f"Query would return {count} elements; configured maximum is {self.max_elements_returned}."
             )
 
+    def _resolve_artifact(self, ref: ArrayRef) -> Path:
+        try:
+            return self.store.resolve(ref.uri, verify=True)
+        except ArtifactStoreError as exc:
+            raise ArrayQueryError(f"Array artefact failed integrity or path validation: {exc}") from exc
+
     def _read_indices(self, ref: ArrayRef, indices: Iterable[int]) -> list[int | float | bool]:
         format_character, item_size = _dtype(ref.dtype)
         prefix = _byte_order_prefix(ref.byte_order)
-        path = self.store.resolve(ref.uri)
+        path = self._resolve_artifact(ref)
         values: list[int | float | bool] = []
         with path.open("rb") as handle:
             for index in indices:
@@ -325,7 +335,7 @@ class ArrayService:
         format_character, item_size = _dtype(ref.dtype)
         prefix = _byte_order_prefix(ref.byte_order)
         expected = _element_count(ref.shape)
-        path = self.store.resolve(ref.uri)
+        path = self._resolve_artifact(ref)
         consumed = 0
         with path.open("rb") as handle:
             while consumed < expected:
