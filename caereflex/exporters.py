@@ -4,7 +4,6 @@ import json, re
 from typing import Any
 from caereflex.core.models import ReflexCase, ExportRecord
 from caereflex.core.validation import safe_display_path
-from caereflex.core.provenance import utc_now_iso
 
 SAFE_USE_POLICY = [
     "Use extracted facts as file-derived facts.",
@@ -46,6 +45,8 @@ def agent_context_dict(case: ReflexCase) -> dict[str, Any]:
         else: extracted.append(record)
     return {
         "schema_version": case.schema_version,
+        "contract_version": case.contract_version,
+        "inspection_profile": case.inspection_profile,
         "case_id": case.case_id,
         "case_name": case.case_name,
         "case_type": case.case_type,
@@ -64,16 +65,32 @@ def agent_context_dict(case: ReflexCase) -> dict[str, Any]:
         "result_fields": [r.model_dump(mode='json') for r in case.result_fields],
         "literature_context": case.literature_context.model_dump(mode='json'),
         "inspection_warnings": [f.model_dump(mode='json') for f in case.inspection_flags],
+        "discovery_diagnostics": case.diagnostics,
+        "case_manifest_summary": _manifest_summary(case.case_manifest),
         "available_actions": ["get_engineering_case", "get_agent_context", "search_related_research", "attach_related_research", "export_case_report", "export_bibliography"],
         "recommended_next_actions": case.agent_summary.recommended_next_actions or ["export_case_report", "attach_related_research"],
         "do_not_claim": list(dict.fromkeys(DO_NOT_CLAIM + case.agent_summary.do_not_claim)),
         "source_references": [p.event for p in case.provenance],
     }
 
+def _manifest_summary(manifest: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not manifest:
+        return None
+    root_uri = str(manifest.get("root_uri") or "")
+    root_display = root_uri.rstrip("/").rsplit("/", 1)[-1] if root_uri else None
+    return {
+        "manifest_id": manifest.get("manifest_id"),
+        "root_display": root_display,
+        "entry_count": len(manifest.get("entries", [])),
+        "detected_formats": manifest.get("detected_formats", []),
+        "case_hints": manifest.get("case_hints", []),
+        "truncated": manifest.get("truncated", False),
+        "limits_reached": manifest.get("limits_reached", []),
+    }
+
 def export_agent_context_json(case: ReflexCase, out: str | Path) -> Path:
     path = Path(out); path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(agent_context_dict(case), indent=2, ensure_ascii=False)
-    # final guard against common absolute paths
     text = re.sub(r'([A-Za-z]:\\[^"\n]+|/home/[^"\n]+|/mnt/data/[^"\n]+)', '[absolute_path_removed]', text)
     path.write_text(text, encoding='utf-8')
     case.exports.append(ExportRecord(export_type='agent_context_json', relative_path=safe_display_path(path)))
@@ -97,10 +114,8 @@ def export_markdown_report(case: ReflexCase, out: str | Path) -> Path:
     lines += [f"- Formats: {', '.join(case.detected_formats) or 'none'}", f"- Tools: {', '.join(case.detected_tools) or 'none'}", f"- Source files: {len(case.source_files)}"]
     lines += ["", "## Extracted Facts", ""]
     if case.assets:
-        for a in case.assets:
-            lines.append(f"- {a.name} ({a.asset_type}); metrics: `{a.metrics}`")
-    else:
-        lines.append("- No engineering assets extracted.")
+        for a in case.assets: lines.append(f"- {a.name} ({a.asset_type}); metrics: `{a.metrics}`")
+    else: lines.append("- No engineering assets extracted.")
     lines += ["", "## Boundary Conditions", ""]
     lines += [f"- {b.patch}: field={b.field}, type={b.type}, value={b.value}" for b in case.boundary_conditions] or ["- None extracted."]
     lines += ["", "## Numerical Settings", ""]
@@ -109,12 +124,13 @@ def export_markdown_report(case: ReflexCase, out: str | Path) -> Path:
     lines += [f"- {r.name}: {r.field_type}, association={r.association}, components={r.components}" for r in case.result_fields] or ["- None extracted."]
     lines += ["", "## CrossRef Metadata", ""]
     if case.literature_evidence:
-        for r in case.literature_evidence:
-            lines.append(f"- {r.title or 'Untitled'} ({r.year or 'n.d.'}), DOI: {r.doi or 'none'}, status: {r.evidence_status}")
-    else:
-        lines.append("- No CrossRef metadata attached.")
+        for r in case.literature_evidence: lines.append(f"- {r.title or 'Untitled'} ({r.year or 'n.d.'}), DOI: {r.doi or 'none'}, status: {r.evidence_status}")
+    else: lines.append("- No CrossRef metadata attached.")
     lines += ["", "## Inspection Flags", ""]
     lines += [f"- **{f.severity}** `{f.category}`: {f.message}" for f in case.inspection_flags] or ["- None."]
+    if case.diagnostics:
+        lines += ["", "## Discovery Diagnostics", ""]
+        lines += [f"- **{d.get('severity', 'info')}** `{d.get('code', 'unknown')}`: {d.get('message', '')}" for d in case.diagnostics]
     lines += ["", "## Limitations and Do-Not-Claim Notes", ""]
     lines += [f"- {x}" for x in DO_NOT_CLAIM]
     path = Path(out); path.parent.mkdir(parents=True, exist_ok=True); path.write_text("\n".join(lines)+"\n", encoding='utf-8')
@@ -126,12 +142,10 @@ def export_bibtex(case: ReflexCase, out: str | Path) -> Path:
     for i, r in enumerate(case.literature_evidence, start=1):
         key = bib_key(r, i)
         fields = {"title": r.title or "Untitled", "year": str(r.year or ""), "doi": r.doi or "", "url": r.url or "", "journal": r.container_title or ""}
-        if r.authors:
-            fields["author"] = " and ".join(r.authors)
+        if r.authors: fields["author"] = " and ".join(r.authors)
         body = ",\n".join([f"  {k} = {{{v}}}" for k, v in fields.items() if v])
         entries.append(f"@article{{{key},\n{body}\n}}")
-    if not entries:
-        entries.append("% No literature evidence records were attached to this ReflexCase.")
+    if not entries: entries.append("% No literature evidence records were attached to this ReflexCase.")
     path = Path(out); path.parent.mkdir(parents=True, exist_ok=True); path.write_text("\n\n".join(entries)+"\n", encoding='utf-8')
     case.exports.append(ExportRecord(export_type='bibtex', relative_path=safe_display_path(path)))
     return path

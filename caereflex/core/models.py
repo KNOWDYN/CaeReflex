@@ -227,6 +227,12 @@ class ReflexCase(BaseModel):
     provenance: list[ProvenanceRecord] = Field(default_factory=list)
     agent_summary: AgentSummary = Field(default_factory=AgentSummary)
     exports: list[ExportRecord] = Field(default_factory=list)
+    contract_version: str | None = None
+    inspection_profile: str | None = None
+    case_manifest: dict[str, Any] | None = None
+    diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+    quantity_evidence: list[dict[str, Any]] = Field(default_factory=list)
+    array_references: list[dict[str, Any]] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 class AdapterResult(BaseModel):

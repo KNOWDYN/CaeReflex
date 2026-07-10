@@ -1,0 +1,57 @@
+name: Core CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install core, server, and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[server,dev]"
+
+      - name: Compile package
+        run: python -m compileall -q caereflex
+
+      - name: Run deterministic core tests
+        id: tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short \
+            -m "not live_crossref and not optional_mesh and not optional_vtk and not optional_gmsh and not slow" \
+            2>&1 | tee pytest-${{ matrix.python-version }}.log
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-${{ matrix.python-version }}
+          path: pytest-${{ matrix.python-version }}.log
+          if-no-files-found: error
+
+      - name: Fail job when tests fail
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
