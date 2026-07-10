@@ -14,13 +14,19 @@ from pathlib import Path
 from typing import Any
 
 from caereflex.contracts import ArtifactRecord
-from caereflex.core.provenance import utc_now_iso
 
 _URI_PREFIX = "caereflex-artifact://sha256/"
 
 
 class ArtifactStoreError(RuntimeError):
     """Raised when an artefact cannot be stored or resolved safely."""
+
+
+def _validate_digest(digest: str) -> str:
+    normalized = digest.lower()
+    if len(normalized) != 64 or any(character not in "0123456789abcdef" for character in normalized):
+        raise ArtifactStoreError("Invalid SHA-256 artefact digest.")
+    return normalized
 
 
 class ArtifactStore:
@@ -32,13 +38,16 @@ class ArtifactStore:
         self._initialise()
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.database_path)
+        connection = sqlite3.connect(self.database_path, timeout=30.0)
         connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 5000")
         return connection
 
     def _initialise(self) -> None:
         self.state_root.mkdir(parents=True, exist_ok=True)
         with self._connect() as connection:
+            connection.execute("PRAGMA journal_mode = WAL")
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS artifacts (
@@ -58,20 +67,20 @@ class ArtifactStore:
 
     @staticmethod
     def uri_for_digest(digest: str) -> str:
-        return f"{_URI_PREFIX}{digest}"
+        return f"{_URI_PREFIX}{_validate_digest(digest)}"
 
     @staticmethod
     def digest_from_uri(uri: str) -> str:
         if not uri.startswith(_URI_PREFIX):
             raise ArtifactStoreError("Only caereflex-artifact://sha256 URIs are supported by the local store.")
-        digest = uri[len(_URI_PREFIX):]
-        if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest.lower()):
-            raise ArtifactStoreError("Invalid SHA-256 artefact URI.")
-        return digest.lower()
+        return _validate_digest(uri[len(_URI_PREFIX):])
 
-    def _relative_path(self, digest: str, suffix: str) -> Path:
-        clean_suffix = suffix if not suffix or suffix.startswith(".") else f".{suffix}"
-        return Path("artifacts") / "sha256" / digest[:2] / digest[2:4] / f"{digest}{clean_suffix}"
+    @staticmethod
+    def _relative_path(digest: str) -> Path:
+        """Return one canonical payload path per digest, independent of media suffix."""
+
+        normalized = _validate_digest(digest)
+        return Path("artifacts") / "sha256" / normalized[:2] / normalized[2:4] / normalized
 
     def put_bytes(
         self,
@@ -82,7 +91,7 @@ class ArtifactStore:
         metadata: dict[str, Any] | None = None,
     ) -> ArtifactRecord:
         digest = hashlib.sha256(data).hexdigest()
-        relative_path = self._relative_path(digest, suffix)
+        relative_path = self._relative_path(digest)
         absolute_path = self.state_root / relative_path
         absolute_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -111,6 +120,7 @@ class ArtifactStore:
         if stored_digest != digest:
             raise ArtifactStoreError("Stored artefact failed SHA-256 integrity verification.")
 
+        normalized_suffix = suffix if suffix.startswith(".") or not suffix else f".{suffix}"
         record = ArtifactRecord(
             artifact_id=f"artifact_{digest[:24]}",
             digest=digest,
@@ -118,7 +128,7 @@ class ArtifactStore:
             relative_path=relative_path.as_posix(),
             media_type=media_type,
             size_bytes=len(data),
-            suffix=suffix if suffix.startswith(".") or not suffix else f".{suffix}",
+            suffix=normalized_suffix,
             immutable=True,
             metadata=metadata or {},
         )
@@ -168,7 +178,7 @@ class ArtifactStore:
         )
 
     def get(self, digest_or_uri: str) -> ArtifactRecord:
-        digest = self.digest_from_uri(digest_or_uri) if "://" in digest_or_uri else digest_or_uri.lower()
+        digest = self.digest_from_uri(digest_or_uri) if "://" in digest_or_uri else _validate_digest(digest_or_uri)
         with self._connect() as connection:
             row = connection.execute("SELECT * FROM artifacts WHERE digest = ?", (digest,)).fetchone()
         if row is None:
