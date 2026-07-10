@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from caereflex.arrays import ArrayService
-from caereflex.contracts import ArrayRef, ArtifactRecord, DiagnosticEvent, InspectionExecutionRequest
+from caereflex.contracts import ArrayRef, ArtifactRecord, DiagnosticEvent, InspectionExecutionRequest, ParserAttempt
 
 
 class ExecutionContextError(RuntimeError):
@@ -22,6 +22,7 @@ class ExecutionContext:
     paths_accessed: list[str] = field(default_factory=list)
     arrays: list[ArrayRef] = field(default_factory=list)
     artifacts: list[ArtifactRecord] = field(default_factory=list)
+    attempts: list[ParserAttempt] = field(default_factory=list)
     diagnostics: list[DiagnosticEvent] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -89,6 +90,13 @@ class ExecutionContext:
             payload = handle.read(requested)
         self.bytes_read += len(payload)
         return payload
+
+    def record_attempt(self, attempt: ParserAttempt) -> ParserAttempt:
+        """Append one ordered native/fallback parser attempt to the execution ledger."""
+
+        self.attempts.append(attempt)
+        self.diagnostics.extend(attempt.diagnostics)
+        return attempt
 
     def register_numeric_array(
         self,
