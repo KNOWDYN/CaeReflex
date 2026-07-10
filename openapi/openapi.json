@@ -3,7 +3,7 @@
   "info": {
     "title": "CaeReflex API",
     "description": "Safe REST/OpenAPI interface for CaeReflex ReflexCase workflows.",
-    "version": "2.0.0a3"
+    "version": "2.0.0a4"
   },
   "paths": {
     "/health": {"get": {"summary": "Health", "responses": {"200": {"description": "Successful Response"}}}},
