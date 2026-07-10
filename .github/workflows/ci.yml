@@ -35,6 +35,22 @@ jobs:
       - name: Compile package
         run: python -m compileall -q caereflex
 
+      - name: Generate static OpenAPI candidate
+        if: matrix.python-version == '3.11'
+        run: |
+          python - <<'PY'
+          from caereflex.server.app import generate_openapi_files
+          generate_openapi_files('generated-openapi')
+          PY
+
+      - name: Upload generated OpenAPI candidate
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-openapi
+          path: generated-openapi/
+          if-no-files-found: error
+
       - name: Run deterministic core tests
         id: tests
         continue-on-error: true
