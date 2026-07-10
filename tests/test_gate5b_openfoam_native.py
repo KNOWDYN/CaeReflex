@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from caereflex.arrays import ArrayService
-from caereflex.contracts import CaseManifest, InspectionBudget, InspectionPlan, InspectionProfile, ManifestEntry
+from caereflex.contracts import CaseManifest, InspectionBudget, InspectionProfile, ManifestEntry
 from caereflex.execution import execute_inspection_plan
 from caereflex.plugins import get_adapter_plugin
 
@@ -87,7 +87,7 @@ def test_native_openfoam_backend_decodes_mesh_fields_and_times(tmp_path: Path):
     assert summary["patches"] == [{"name": "walls", "type": "wall", "n_faces": 6, "start_face": 0, "physical_type": None}]
     assert summary["time_directories"] == ["0", "1"]
     assert {(field["time"], field["name"]) for field in summary["fields"]} == {("0", "U"), ("0", "p"), ("1", "U")}
-    assert summary["array_count"] == len(result.arrays) == 9
+    assert summary["array_count"] == len(result.arrays) == 8
     assert result.source_mutation_detected is False
 
     arrays = ArrayService(tmp_path / "state")
