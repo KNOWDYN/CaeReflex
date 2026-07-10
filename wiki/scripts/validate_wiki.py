@@ -47,11 +47,20 @@ def reflexcase_schema_version() -> str:
 
 def cli_commands() -> set[str]:
     text = read(ROOT / "caereflex" / "cli" / "main.py")
-    top = set(re.findall(r'@app\.command\("([^"]+)"\)', text))
-    crossref = {f"crossref {name}" for name in re.findall(r'@crossref_app\.command\("([^"]+)"\)', text)}
-    export = {f"export {name}" for name in re.findall(r'@export_app\.command\("([^"]+)"\)', text)}
-    examples = {f"examples {name}" for name in re.findall(r'@examples_app\.command\("([^"]+)"\)', text)}
-    return top | crossref | export | examples
+    commands = set(re.findall(r'@app\.command\("([^"]+)"\)', text))
+    groups = {
+        "crossref_app": "crossref",
+        "export_app": "export",
+        "examples_app": "examples",
+        "adapters_app": "adapters",
+        "schema_app": "schema",
+        "diagnostics_app": "diagnostics",
+        "cache_app": "cache",
+    }
+    for variable, prefix in groups.items():
+        pattern = rf'@{re.escape(variable)}\.command\("([^"]+)"\)'
+        commands.update(f"{prefix} {name}" for name in re.findall(pattern, text))
+    return commands
 
 
 def rest_routes() -> set[str]:
@@ -107,7 +116,6 @@ def main() -> int:
 
         adapters = read(DOCS / "architecture" / "adapters.md")
         for adapter in sorted(adapter_names()):
-            
             display = {"gmsh": "Gmsh", "openfoam": "OpenFOAM", "vtk": "VTK"}.get(adapter, adapter)
             assert_contains(adapters, display, DOCS / "architecture" / "adapters.md")
 
