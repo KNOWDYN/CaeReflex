@@ -1,11 +1,17 @@
 from __future__ import annotations
+import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 
 
+def _state_dir_from_environment() -> Path | None:
+    value = os.environ.get("CAEREFLEX_STATE_DIR")
+    return Path(value) if value else None
+
+
 class CaeReflexConfig(BaseModel):
     workspace_dir: Path = Field(default_factory=lambda: Path.cwd())
-    state_dir: Path | None = None
+    state_dir: Path | None = Field(default_factory=_state_dir_from_environment)
     max_file_size_mb: int = 25
     max_scan_depth: int = 3
     max_scan_files: int = 500
