@@ -1,7 +1,6 @@
 """SQLite-backed local job records for isolated inspection execution."""
 from __future__ import annotations
 
-import json
 import sqlite3
 from pathlib import Path
 
@@ -41,6 +40,7 @@ class JobStore:
             )
 
     def put(self, record: JobRecord) -> JobRecord:
+        status = record.status.value if hasattr(record.status, "value") else str(record.status)
         with self._connect() as connection:
             connection.execute(
                 """
@@ -57,7 +57,7 @@ class JobStore:
                 (
                     record.job_id,
                     record.kind,
-                    str(record.status),
+                    status,
                     record.created_at,
                     record.started_at,
                     record.completed_at,
