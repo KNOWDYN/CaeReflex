@@ -14,7 +14,7 @@ Contact: [ipcontrol@knowdyn.co.uk](mailto:ipcontrol@knowdyn.co.uk)
 
 ### 1. Ownership
 
-CaeReflex is owned by **KNOWDYN LTD (UK)**.
+CaeReflex is managed by **KNOWDYN LTD (UK)** on behalf of its owners.
 
 All copyright, database rights, design rights, trade secrets, know-how, documentation rights, software rights, and all other intellectual-property rights in CaeReflex are reserved by KNOWDYN LTD (UK), except for third-party components governed by their own separate licences.
 
