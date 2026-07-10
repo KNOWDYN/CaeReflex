@@ -67,6 +67,9 @@ def cli_commands() -> set[str]:
 
     mounted_groups = {
         ROOT / "caereflex" / "cli" / "units.py": ("units_app", "units"),
+        ROOT / "caereflex" / "cli" / "execution.py": ("execution_app", "execution"),
+        ROOT / "caereflex" / "cli" / "arrays.py": ("arrays_app", "arrays"),
+        ROOT / "caereflex" / "cli" / "jobs.py": ("jobs_app", "jobs"),
     }
     for path, (variable, prefix) in mounted_groups.items():
         mounted_text = read(path)
