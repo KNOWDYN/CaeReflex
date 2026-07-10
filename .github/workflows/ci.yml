@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -35,21 +35,22 @@ jobs:
       - name: Compile package
         run: python -m compileall -q caereflex
 
-      - name: Generate static OpenAPI candidate
+      - name: Regenerate and commit static OpenAPI
         if: matrix.python-version == '3.11'
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           python - <<'PY'
           from caereflex.server.app import generate_openapi_files
-          generate_openapi_files('generated-openapi')
+          generate_openapi_files('openapi')
           PY
-
-      - name: Upload generated OpenAPI candidate
-        if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-openapi
-          path: generated-openapi/
-          if-no-files-found: error
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add openapi/openapi.json openapi/openapi.yaml
+          if ! git diff --cached --quiet; then
+            git commit -m "release: regenerate OpenAPI for 2.0.0a2"
+            git push origin "HEAD:${HEAD_BRANCH}"
+          fi
 
       - name: Run deterministic core tests
         id: tests
