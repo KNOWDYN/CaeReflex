@@ -12,6 +12,9 @@ from caereflex.version import __version__
 runner = CliRunner()
 
 
+EXPECTED_BACKENDS = {"core.manifest-audit", "gmsh.native", "openfoam.native", "vtk.native"}
+
+
 def test_version_and_doctor_report_alpha_runtime():
     version = runner.invoke(app, ["version"])
     assert version.exit_code == 0
@@ -22,7 +25,7 @@ def test_version_and_doctor_report_alpha_runtime():
     assert report["contract_version"] == CONTRACT_VERSION
     assert report["execution_runtime"]["mode"] == "local-subprocess"
     backend_ids = {item["backend_id"] for item in report["execution_runtime"]["backends"]}
-    assert {"core.manifest-audit", "gmsh.native", "openfoam.native"}.issubset(backend_ids)
+    assert EXPECTED_BACKENDS.issubset(backend_ids)
 
 
 def test_execution_backends_cli_json():
@@ -30,7 +33,7 @@ def test_execution_backends_cli_json():
     assert result.exit_code == 0
     payload = json.loads(result.output)
     backend_ids = {item["backend_id"] for item in payload["execution_backends"]}
-    assert {"core.manifest-audit", "gmsh.native", "openfoam.native"}.issubset(backend_ids)
+    assert EXPECTED_BACKENDS.issubset(backend_ids)
 
 
 def test_arrays_cli_queries_registered_array(tmp_path: Path):
