@@ -142,6 +142,36 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "explanation": "The explicitly enabled isolated Gmsh API path could not inspect the file and returned to fingerprint-only evidence.",
         "action": "Review the native-library failure and file format. Do not assume entity or topology evidence is available.",
     },
+    "CRX-VTK-READ-001": {
+        "title": "VTK source could not be read",
+        "explanation": "The selected VTK artefact could not be read within the execution plan's path or byte limits.",
+        "action": "Confirm the manifest path and increase the read budget only for a trusted source.",
+    },
+    "CRX-VTK-PYVISTA-FALLBACK-001": {
+        "title": "PyVista/VTK decoding fell back",
+        "explanation": "The optional PyVista/VTK reader was installed but did not decode the dataset, so CaeReflex tried meshio next.",
+        "action": "Review the native-reader exception and continue only with the explicitly recorded fallback evidence.",
+    },
+    "CRX-VTK-MESHIO-FALLBACK-001": {
+        "title": "VTK meshio decoding fell back",
+        "explanation": "The optional meshio reader did not decode the VTK dataset, so CaeReflex tried the bounded dependency-free reader.",
+        "action": "Review the attempt ledger and preserve the bounded core result only when its status is decoded.",
+    },
+    "CRX-VTK-CORE-FALLBACK-001": {
+        "title": "VTK decoding fell back to fingerprint",
+        "explanation": "Neither an available optional reader nor the bounded legacy/XML reader produced native dataset evidence.",
+        "action": "Treat points, cells and fields as unavailable; inspect the encoding and reader diagnostics before selecting another trusted backend.",
+    },
+    "CRX-VTK-XML-ENCODING-001": {
+        "title": "VTK XML encoding requires an optional reader",
+        "explanation": "The dependency-free XML reader encountered appended, compressed or otherwise unsupported heavy-data encoding.",
+        "action": "Install and use the optional VTK/PyVista backend for a trusted file, or retain fingerprint-only evidence.",
+    },
+    "CRX-VTK-COLLECTION-REFERENCE-001": {
+        "title": "VTK collection reference not loaded",
+        "explanation": "A collection or parallel metadata file referenced an unsafe path or a dataset absent from the selected manifest.",
+        "action": "Review and normalise relative references inside the trusted case root; CaeReflex will not fetch or traverse external references automatically.",
+    },
 }
 
 
