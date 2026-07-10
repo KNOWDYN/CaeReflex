@@ -13,6 +13,7 @@ from caereflex.execution.context import ExecutionContext
 from caereflex.execution import gmsh_native as _gmsh_native
 from caereflex.execution.gmsh_api import gmsh_api_summary
 from caereflex.execution.openfoam_native import OpenFOAMNativeBackend
+from caereflex.execution.vtk_native import VTKNativeBackend
 
 # Gmsh releases return either Python lists or NumPy-like arrays from the same API
 # calls. Keep the large format reader independent while installing the narrowly
@@ -120,5 +121,6 @@ BUILTIN_BACKENDS = {
     ManifestAuditBackend.backend_id: ManifestAuditBackend,
     GmshNativeBackend.backend_id: GmshNativeBackend,
     OpenFOAMNativeBackend.backend_id: OpenFOAMNativeBackend,
+    VTKNativeBackend.backend_id: VTKNativeBackend,
     TestExecutionBackend.backend_id: TestExecutionBackend,
 }
