@@ -1,7 +1,6 @@
 """Subprocess entry point for bounded deep-inspection backends."""
 from __future__ import annotations
 
-import json
 import math
 import os
 import socket
@@ -72,6 +71,56 @@ def _apply_posix_limits(request: InspectionExecutionRequest) -> dict[str, str]:
         return {"resource_limits": f"best-effort-failed:{type(exc).__name__}"}
 
 
+def _compact_result_failure(
+    request: InspectionExecutionRequest,
+    context: ExecutionContext,
+    *,
+    started_at: str,
+    started_clock: float,
+    backend_version: str | None,
+    message: str,
+) -> InspectionExecutionResult:
+    completed_at = utc_now_iso()
+    elapsed = time.monotonic() - started_clock
+    diagnostic = DiagnosticEvent(
+        code="CRX-EXEC-RESULT-001",
+        severity=DiagnosticSeverity.error,
+        message=message,
+        parser="caereflex.execution.worker",
+        information_lost=["backend_result", "large_or_nonserializable_metadata"],
+    )
+    attempt = ParserAttempt(
+        attempt_id=f"attempt_{uuid.uuid4().hex[:20]}",
+        stage="serialize_result",
+        backend_id=request.backend_id,
+        backend_version=backend_version,
+        outcome=AttemptOutcome.failed,
+        started_at=started_at,
+        completed_at=completed_at,
+        elapsed_seconds=elapsed,
+        exception_message=message,
+        diagnostics=[diagnostic],
+    )
+    return InspectionExecutionResult(
+        execution_id=request.execution_id,
+        job_id=request.job_id,
+        plugin_id=request.plan.plugin_id,
+        backend_id=request.backend_id,
+        backend_version=backend_version,
+        status=ExecutionStatus.failed,
+        started_at=started_at,
+        completed_at=completed_at,
+        elapsed_seconds=elapsed,
+        bytes_read=context.bytes_read,
+        paths_accessed=context.paths_accessed,
+        arrays=context.arrays,
+        artifacts=context.artifacts,
+        attempts=[*context.attempts, attempt],
+        diagnostics=[*context.diagnostics, diagnostic],
+        termination_reason=message,
+    )
+
+
 def run_worker(request_path: str | Path, result_path: str | Path) -> int:
     request = InspectionExecutionRequest.model_validate_json(Path(request_path).read_text(encoding="utf-8"))
     started_at = utc_now_iso()
@@ -88,7 +137,7 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
         payload = backend.execute(request, context) or {}
         completed_at = utc_now_iso()
         elapsed = time.monotonic() - started_clock
-        attempt = ParserAttempt(
+        execution_attempt = ParserAttempt(
             attempt_id=attempt_id,
             stage=request.plan.operation,
             backend_id=request.backend_id,
@@ -99,6 +148,7 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
             elapsed_seconds=elapsed,
             metadata={"policy_enforcement": guard_metadata},
         )
+        attempts = context.attempts or [execution_attempt]
         result = InspectionExecutionResult(
             execution_id=request.execution_id,
             job_id=request.job_id,
@@ -113,9 +163,13 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
             paths_accessed=context.paths_accessed,
             arrays=context.arrays,
             artifacts=context.artifacts,
-            attempts=[attempt],
+            attempts=attempts,
             diagnostics=context.diagnostics,
-            metadata={"backend_result": payload, "policy_enforcement": guard_metadata},
+            metadata={
+                "backend_result": payload,
+                "policy_enforcement": guard_metadata,
+                "execution_attempt": execution_attempt.model_dump(mode="json") if context.attempts else None,
+            },
         )
     except Exception as exc:
         completed_at = utc_now_iso()
@@ -156,15 +210,39 @@ def run_worker(request_path: str | Path, result_path: str | Path) -> int:
             paths_accessed=context.paths_accessed,
             arrays=context.arrays,
             artifacts=context.artifacts,
-            attempts=[attempt],
+            attempts=[*context.attempts, attempt],
             diagnostics=[*context.diagnostics, diagnostic],
             termination_reason=str(exc),
             metadata={"policy_enforcement": guard_metadata},
         )
 
+    try:
+        serialized = result.model_dump_json(indent=2).encode("utf-8")
+    except Exception as exc:
+        result = _compact_result_failure(
+            request,
+            context,
+            started_at=started_at,
+            started_clock=started_clock,
+            backend_version=backend_version,
+            message=f"Execution result was not JSON-serializable: {type(exc).__name__}: {exc}",
+        )
+        serialized = result.model_dump_json(indent=2).encode("utf-8")
+
+    if len(serialized) > request.policy.max_result_bytes:
+        result = _compact_result_failure(
+            request,
+            context,
+            started_at=started_at,
+            started_clock=started_clock,
+            backend_version=backend_version,
+            message=f"Execution result exceeded the configured limit of {request.policy.max_result_bytes} bytes.",
+        )
+        serialized = result.model_dump_json(indent=2).encode("utf-8")
+
     destination = Path(result_path)
     temporary = destination.with_suffix(destination.suffix + ".tmp")
-    temporary.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+    temporary.write_bytes(serialized)
     os.replace(temporary, destination)
     return 0 if result.status == ExecutionStatus.success else 1
 
