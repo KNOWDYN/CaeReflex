@@ -1,12 +1,13 @@
 # Gate 5A — Safe Execution Runtime, Artefacts and Lazy Arrays
 
-Gate 5A implements the reusable execution substrate required before native OpenFOAM, Gmsh, VTK or future CAE backends are allowed to deepen inspection.
+Gate 5A implemented the reusable execution substrate required before native OpenFOAM, Gmsh, VTK or future CAE backends can deepen inspection.
 
-It does not add native geometry, mesh or field decoding. The only bundled execution backend is `core.manifest-audit`, which exercises the runtime using metadata already selected by an inspection plan.
+The original `2.0.0a1` release added no native geometry, mesh or field decoder. It introduced `core.manifest-audit` so the execution path could be accepted independently. Subsequent releases add native readers on top of this unchanged substrate: `openfoam.native` in `2.0.0a2` and `gmsh.native` in `2.0.0a3`.
 
 ## Release posture
 
-- Package version: `2.0.0a1`.
+- Gate 5A package version: `2.0.0a1`.
+- Current package line after Gate 5C: `2.0.0a3`.
 - Contract version: `2.0-alpha.3`.
 - ReflexCase schema version remains `1.0` because the additions remain optional and backward-compatible.
 - Gate 4 dimensional evidence remains unchanged.
@@ -54,7 +55,7 @@ It provides:
 - separate state and output directories;
 - no solver execution or source-writing API.
 
-Native libraries may bypass Python-level guards. Backends that require stronger isolation must later declare and use a container, operating-system sandbox or institutional execution provider. Capability documentation must not describe the default worker as a complete sandbox.
+Native libraries may bypass Python-level guards. Backends that require stronger isolation must declare and use a container, operating-system sandbox or institutional execution provider. Capability documentation must not describe the default worker as a complete sandbox.
 
 ## Parser-attempt ledger
 
@@ -69,13 +70,13 @@ Every worker result contains a versioned attempt record with:
 - fallback target and information lost;
 - enforcement metadata.
 
-Later native adapters must append their own ordered attempts, for example:
+Native adapters append ordered attempts. Current examples include:
 
 ```text
-native VTK backend
-→ meshio fallback
-→ structured header parser
-→ fingerprint-only
+OpenFOAM native ASCII → structured metadata
+Gmsh meshio → core MSH ASCII → fingerprint-only
+Gmsh .geo declaration parser → fingerprint-only
+future VTK/PyVista → meshio → structured header → fingerprint-only
 ```
 
 ## Content-addressed artefacts
@@ -139,7 +140,7 @@ Gate 5A includes a small standard-library provider for deterministic tests and s
 - deterministic sampling;
 - streaming `min`, `max`, `mean`, `sum` and `count` reductions.
 
-This provider is not intended to replace NumPy, VTK, meshio or solver-native data access. Native adapters may register new formats and providers while returning the same `ArrayRef` contract.
+This provider does not replace NumPy, VTK, meshio or solver-native data access. Native adapters register generated arrays while returning the same backend-neutral `ArrayRef` contract.
 
 ## CLI
 
@@ -155,9 +156,9 @@ caereflex arrays slice ARRAY_ID --start 0 --stop 100
 caereflex arrays reduce ARRAY_ID --operation mean
 ```
 
-`caereflex inspect CASE --profile deep` runs the safe manifest-audit backend and records the execution result in case metadata. Native decoding is intentionally unavailable until PRs 34B–34D.
+`caereflex inspect CASE --profile deep` now chooses the native backend declared by a supported adapter. OpenFOAM uses `openfoam.native`, Gmsh uses `gmsh.native`, and formats without a completed reader continue to use `core.manifest-audit`.
 
-## Stable diagnostics
+## Stable Gate 5A diagnostics
 
 - `CRX-EXEC-START-001`
 - `CRX-EXEC-BACKEND-001`
@@ -169,12 +170,14 @@ caereflex arrays reduce ARRAY_ID --operation mean
 - `CRX-ARRAY-QUERY-001`
 - `CRX-ARTIFACT-INTEGRITY-001`
 
+Backend-specific diagnostics are documented in their release and user-guide pages.
+
 ## Acceptance locks
 
 Gate 5A is complete only when:
 
 1. the core package installs without native CAE dependencies;
-2. a backend success, exception, timeout and process crash all become deterministic results;
+2. backend success, exception, timeout and process crash become deterministic results;
 3. the parent process survives worker failures;
 4. source files remain unchanged in compliant-backend tests;
 5. source changes are detected and invalidate the result;
@@ -184,13 +187,11 @@ Gate 5A is complete only when:
 9. jobs persist locally and can be inspected through the CLI;
 10. Python 3.10, 3.11 and 3.12 core CI passes.
 
-## Explicitly deferred
+## Still deferred after Gate 5C
 
-- native OpenFOAM polyMesh and field reading;
-- native Gmsh/meshio geometry and topology;
 - native VTK/PyVista data reading;
-- spatial evidence graphs and coordinate frames;
+- canonical spatial evidence graphs and coordinate-frame transformations;
 - physics-consistency rule packs;
-- asynchronous background queues;
+- asynchronous background queues and cancellation;
 - distributed execution;
 - complete operating-system sandboxing.
