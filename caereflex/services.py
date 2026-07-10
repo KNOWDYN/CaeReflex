@@ -1,5 +1,6 @@
 from __future__ import annotations
 from importlib import util as importlib_util
+import json
 from pathlib import Path
 import platform
 from typing import Any
@@ -17,7 +18,21 @@ from caereflex.contracts import (
     InspectionProfile,
 )
 from caereflex.core.config import CaeReflexConfig
-from caereflex.core.models import InspectionFlag, InspectionStatus, ProvenanceRecord, ReflexCase, Severity
+from caereflex.core.models import (
+    AssetType,
+    EngineeringAsset,
+    FieldAssociation,
+    FieldType,
+    InspectionFlag,
+    InspectionStatus,
+    MaterialPropertyRecord,
+    ProvenanceRecord,
+    ReflexCase,
+    ResultFieldRecord,
+    Severity,
+    SourceKind,
+    TraceInfo,
+)
 from caereflex.core.errors import UnsupportedFormatError
 from caereflex.adapters.gmsh import GmshAdapter
 from caereflex.adapters.openfoam import OpenFOAMAdapter
@@ -32,7 +47,14 @@ from caereflex.exporters import (
 from caereflex.plugins import adapter_capabilities, get_adapter_plugin, probe_manifest
 from caereflex.version import __version__
 
-EXAMPLE_NAMES = ["gmsh_minimal", "openfoam_cavity_minimal", "vtk_minimal", "crossref_context", "agent_workflow"]
+EXAMPLE_NAMES = [
+    "gmsh_minimal",
+    "openfoam_cavity_minimal",
+    "openfoam_cavity_native",
+    "vtk_minimal",
+    "crossref_context",
+    "agent_workflow",
+]
 
 
 def scan_path(
@@ -65,6 +87,165 @@ def _manifest_source_root(manifest: CaseManifest, inspected_path: Path) -> Path:
     return inspected_path.resolve() if inspected_path.is_dir() else inspected_path.parent.resolve()
 
 
+def _status_value(value: Any) -> str:
+    return value.value if hasattr(value, "value") else str(value)
+
+
+def _extend_unique_json(target: list[dict[str, Any]], rows: list[dict[str, Any]]) -> None:
+    seen = {json.dumps(item, sort_keys=True, default=str, separators=(",", ":")) for item in target}
+    for row in rows:
+        key = json.dumps(row, sort_keys=True, default=str, separators=(",", ":"))
+        if key not in seen:
+            target.append(row)
+            seen.add(key)
+
+
+def _native_field_type(components: int | None) -> FieldType:
+    if components == 1:
+        return FieldType.scalar
+    if components == 3:
+        return FieldType.vector
+    if components in {6, 9}:
+        return FieldType.tensor
+    return FieldType.unknown
+
+
+def _native_association(value: str | None) -> FieldAssociation:
+    return {
+        "cell": FieldAssociation.volume,
+        "point": FieldAssociation.point,
+        "face": FieldAssociation.field,
+        "boundary": FieldAssociation.boundary,
+    }.get(value or "", FieldAssociation.unknown)
+
+
+def _integrate_openfoam_native(case: ReflexCase, result: Any) -> None:
+    payload = result.metadata.get("backend_result", {}) if isinstance(result.metadata, dict) else {}
+    summary = payload.get("summary") if isinstance(payload, dict) else None
+    if result.backend_id != "openfoam.native" or not isinstance(summary, dict):
+        return
+
+    case.metadata["openfoam_native"] = summary
+    _extend_unique_json(case.quantity_evidence, list(payload.get("quantity_evidence", [])))
+    _extend_unique_json(case.dimensional_checks, list(payload.get("dimensional_checks", [])))
+
+    trace = TraceInfo(
+        source_kind=SourceKind.extracted,
+        source_files=list(result.paths_accessed),
+        adapter="openfoam.native",
+    )
+    mesh = summary.get("mesh") if isinstance(summary.get("mesh"), dict) else {}
+    if mesh:
+        metrics = {
+            "point_count": mesh.get("point_count"),
+            "face_count": mesh.get("face_count"),
+            "internal_face_count": mesh.get("internal_face_count"),
+            "boundary_face_count": mesh.get("boundary_face_count"),
+            "cell_count": mesh.get("cell_count"),
+            "patch_count": mesh.get("patch_count"),
+            "native_decoded": mesh.get("native_decoded", False),
+        }
+        properties = {
+            "bounds": mesh.get("bounds"),
+            "patches": mesh.get("patches", []),
+            "array_ids": mesh.get("array_ids", {}),
+            "warnings": mesh.get("warnings", []),
+        }
+        existing_asset = next((item for item in case.assets if item.asset_id == "asset_openfoam_mesh"), None)
+        if existing_asset is None:
+            case.assets.append(
+                EngineeringAsset(
+                    asset_id="asset_openfoam_mesh",
+                    asset_type=AssetType.mesh,
+                    name="OpenFOAM polyMesh",
+                    metrics=metrics,
+                    properties=properties,
+                    trace=trace,
+                )
+            )
+        else:
+            existing_asset.metrics.update(metrics)
+            existing_asset.properties.update(properties)
+
+    existing_fields = {
+        (item.name, str(item.metadata.get("time", "0"))): item
+        for item in case.result_fields
+    }
+    for row in summary.get("fields", []):
+        if not isinstance(row, dict):
+            continue
+        key = (str(row.get("name")), str(row.get("time", "0")))
+        existing = existing_fields.get(key)
+        if existing is not None:
+            existing.metadata["native_reader"] = row
+            continue
+        record = ResultFieldRecord(
+            name=key[0],
+            association=_native_association(row.get("association")),
+            field_type=_native_field_type(row.get("components")),
+            components=row.get("components"),
+            metadata={"time": key[1], "native_reader": row},
+            trace=trace,
+        )
+        case.result_fields.append(record)
+        existing_fields[key] = record
+
+    existing_materials = {item.name: item for item in case.materials}
+    for row in summary.get("materials", []):
+        if not isinstance(row, dict) or not row.get("name"):
+            continue
+        name = str(row["name"])
+        existing = existing_materials.get(name)
+        if existing is not None:
+            existing.metadata["native_reader"] = row
+            continue
+        material = MaterialPropertyRecord(
+            name=name,
+            value=row.get("magnitude", row.get("value")),
+            units=row.get("canonical_unit"),
+            metadata={"native_reader": row},
+            trace=trace,
+        )
+        case.materials.append(material)
+        existing_materials[name] = material
+
+    case.provenance.append(
+        ProvenanceRecord(
+            event="openfoam_native_evidence_integrated",
+            details={
+                "execution_id": result.execution_id,
+                "mesh_native_decoded": mesh.get("native_decoded", False),
+                "array_count": len(result.arrays),
+                "field_count": len(summary.get("fields", [])),
+                "time_count": len(summary.get("times", [])),
+            },
+        )
+    )
+    mesh_phrase = (
+        f"Native OpenFOAM evidence includes {mesh.get('point_count')} points, "
+        f"{mesh.get('face_count')} faces and {mesh.get('cell_count')} cells."
+        if mesh.get("native_decoded") else
+        "OpenFOAM native mesh decoding was incomplete; structured inventory evidence was preserved."
+    )
+    case.agent_summary.summary = f"{case.agent_summary.summary} {mesh_phrase}".strip()
+
+
+def _append_execution_evidence(case: ReflexCase, result: Any) -> None:
+    existing_array_ids = {
+        item.get("array_id") or item.get("uri")
+        for item in case.array_references
+        if isinstance(item, dict)
+    }
+    for item in result.arrays:
+        row = item.model_dump(mode="json")
+        key = row.get("array_id") or row.get("uri")
+        if key not in existing_array_ids:
+            case.array_references.append(row)
+            existing_array_ids.add(key)
+    _extend_unique_json(case.diagnostics, [item.model_dump(mode="json") for item in result.diagnostics])
+    _integrate_openfoam_native(case, result)
+
+
 def _run_deep_execution(
     case: ReflexCase,
     manifest: CaseManifest,
@@ -88,20 +269,26 @@ def _run_deep_execution(
     if not plan.selected_paths:
         plan.selected_paths = [entry.path for entry in manifest.entries if not entry.is_dir][: execution_budget.max_files]
     plan.backend_candidates = list(dict.fromkeys([*plan.backend_candidates, "core.manifest-audit"]))
-    plan.metadata["gate_5a_native_backend_available"] = False
+    plan.metadata["gate_5b_native_backend_available"] = "openfoam.native" in plan.backend_candidates
+
+    policy = ExecutionPolicy(
+        max_memory_bytes=config.max_execution_memory_bytes,
+        max_result_bytes=config.max_execution_result_bytes,
+    )
+    source_root = _manifest_source_root(manifest, inspected_path)
+    history: list[Any] = []
+    primary_backend = plan.backend_candidates[0]
 
     try:
-        result = execute_inspection_plan(
+        primary = execute_inspection_plan(
             manifest,
             plan,
-            backend_id="core.manifest-audit",
-            source_root=_manifest_source_root(manifest, inspected_path),
+            backend_id=primary_backend,
+            source_root=source_root,
             state_root=config.execution_state_dir,
-            policy=ExecutionPolicy(
-                max_memory_bytes=config.max_execution_memory_bytes,
-                max_result_bytes=config.max_execution_result_bytes,
-            ),
+            policy=policy,
         )
+        history.append(primary)
     except InspectionExecutionError as exc:
         diagnostic = DiagnosticEvent(
             code="CRX-EXEC-START-001",
@@ -116,27 +303,63 @@ def _run_deep_execution(
         case.inspection.status = InspectionStatus.partial_success
         return
 
-    case.metadata["inspection_execution"] = result.model_dump(mode="json")
-    case.array_references.extend(item.model_dump(mode="json") for item in result.arrays)
-    case.diagnostics.extend(item.model_dump(mode="json") for item in result.diagnostics)
-    case.provenance.append(
-        ProvenanceRecord(
-            event="deep_inspection_execution_completed",
-            details={
-                "execution_id": result.execution_id,
-                "job_id": result.job_id,
-                "backend_id": result.backend_id,
-                "status": result.status,
-                "array_count": len(result.arrays),
-            },
+    terminal_statuses = {
+        ExecutionStatus.failed.value,
+        ExecutionStatus.timed_out.value,
+        ExecutionStatus.crashed.value,
+        ExecutionStatus.blocked.value,
+    }
+    if primary_backend != "core.manifest-audit" and _status_value(primary.status) in terminal_statuses:
+        case.inspection_flags.append(
+            InspectionFlag(
+                severity=Severity.warning,
+                category="native_execution_fallback",
+                message="The native execution backend failed; CaeReflex retained its result and ran the core manifest audit fallback.",
+            )
         )
-    )
-    if str(result.status) != ExecutionStatus.success.value:
+        try:
+            fallback = execute_inspection_plan(
+                manifest,
+                plan,
+                backend_id="core.manifest-audit",
+                source_root=source_root,
+                state_root=config.execution_state_dir,
+                policy=policy,
+            )
+            history.append(fallback)
+        except InspectionExecutionError as exc:
+            case.inspection_flags.append(
+                InspectionFlag(
+                    severity=Severity.warning,
+                    category="fallback_execution_failed",
+                    message=f"Core manifest-audit fallback could not start: {exc}",
+                )
+            )
+
+    for execution in history:
+        _append_execution_evidence(case, execution)
+        case.provenance.append(
+            ProvenanceRecord(
+                event="deep_inspection_execution_completed",
+                details={
+                    "execution_id": execution.execution_id,
+                    "job_id": execution.job_id,
+                    "backend_id": execution.backend_id,
+                    "status": execution.status,
+                    "array_count": len(execution.arrays),
+                },
+            )
+        )
+
+    final_result = history[-1]
+    case.metadata["inspection_execution"] = final_result.model_dump(mode="json")
+    case.metadata["inspection_execution_history"] = [item.model_dump(mode="json") for item in history]
+    if any(_status_value(item.status) != ExecutionStatus.success.value for item in history) or len(history) > 1:
         case.inspection_flags.append(
             InspectionFlag(
                 severity=Severity.warning,
                 category="deep_execution_degraded",
-                message=result.termination_reason or "Deep inspection execution did not complete successfully.",
+                message=primary.termination_reason or "Deep inspection completed with an explicit partial or fallback result.",
             )
         )
         case.inspection.status = InspectionStatus.partial_success
@@ -341,6 +564,8 @@ def run_example(name: str, out_dir: str | Path = "build") -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     if name == "openfoam_cavity_minimal":
         case = inspect_path(root / name, adapter="openfoam")
+    elif name == "openfoam_cavity_native":
+        case = inspect_path(root / name, adapter="openfoam", profile=InspectionProfile.deep)
     elif name == "gmsh_minimal":
         case = inspect_path(root / name / "t1.geo", adapter="gmsh")
     elif name == "vtk_minimal":
