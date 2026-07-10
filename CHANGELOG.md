@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.0a2 — Gate 5B OpenFOAM native reader
+
+### Gate 5B — Native OpenFOAM ASCII evidence
+
+- Added the first production deep-inspection backend, `openfoam.native`.
+- Added bounded native ASCII decoding for `points`, `faces`, `owner`, `neighbour`, and `boundary`.
+- Added mesh counts, patch ranges, spatial bounds, and lazy topology/coordinate arrays.
+- Added native scalar, vector, spherical-tensor, symmetric-tensor, and tensor field metadata.
+- Added uniform and nonuniform internal-field decoding behind bounded `ArrayRef` handles.
+- Added time-directory inventory and field availability by time.
+- Reused Gate 4 dimensional semantics for OpenFOAM fields and dimensioned material properties.
+- Added explicit literal-only handling for includes, substitutions, code streams, coded conditions, and dynamic-library declarations.
+- Added binary-payload detection with an honest metadata fallback rather than architecture guessing.
+- Added native-to-structured parser-attempt ledgers and partial-success execution status.
+- Added a complete one-cell cavity fixture and deterministic native-reader regression tests.
+
 ## 2.0.0a1 — Gate 5A execution foundation
 
 ### Gate 5A — Safe execution, artefacts and lazy arrays
