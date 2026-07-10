@@ -47,6 +47,13 @@ def _is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def _normalise_source_root(source_root: str | Path) -> Path:
+    candidate = Path(source_root).expanduser().resolve()
+    if not candidate.exists():
+        raise InspectionExecutionError("source_root must exist")
+    return candidate.parent if candidate.is_file() else candidate
+
+
 def _snapshot_sources(
     source_root: Path,
     selected_paths: list[str],
@@ -189,9 +196,7 @@ def execute_inspection_plan(
     backend_options: dict[str, Any] | None = None,
     policy: ExecutionPolicy | None = None,
 ) -> InspectionExecutionResult:
-    source_root_path = Path(source_root).expanduser().resolve()
-    if not source_root_path.exists() or not source_root_path.is_dir():
-        raise InspectionExecutionError("source_root must be an existing directory")
+    source_root_path = _normalise_source_root(source_root)
     state_root_path = Path(state_root).expanduser().resolve()
     if _is_within(state_root_path, source_root_path):
         raise InspectionExecutionError(
