@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0a5 — Gate 5 compatibility freeze and malformed-input hardening
+
+- Froze the built-in execution-backend envelope as `caereflex.gate5.backend-result/1.0`.
+- Added one common compatibility report to `core.manifest-audit`, `openfoam.native`, `gmsh.native` and `vtk.native` results.
+- Added worker-side rejection of non-object payloads, missing summaries, non-finite values, unsafe paths, mismatched counts, invalid artefact references and materialised heavy arrays.
+- Added stable diagnostic `CRX-GATE5-COMPAT-001` for deterministic backend-contract failures.
+- Added cross-backend tests for common fields, relative paths, content-addressed arrays, parser-attempt accounting, deterministic JSON and source immutability.
+- Added malformed Gmsh, OpenFOAM and VTK fixtures covering binary encodings, truncated sections, duplicate identifiers, count mismatches, negative labels, invalid connectivity and malformed XML.
+- Added deterministic fault-injection tests proving that invalid backend payloads fail without crashing the parent process or mutating engineering sources.
+- Kept ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`; the new Gate 5 envelope is additive inside execution summaries.
+- Completed Gate 5 acceptance across the reusable runtime and all three native-reader families.
+
 ## 2.0.0a4 — Gate 5D native VTK inspection
 
 - Added the isolated `vtk.native` execution backend.
