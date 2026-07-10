@@ -102,6 +102,36 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "explanation": "A content-addressed artefact did not match its recorded SHA-256 digest or resolved outside the configured store.",
         "action": "Stop using the artefact, preserve logs, and recreate the local state directory from trusted sources.",
     },
+    "CRX-OF-NATIVE-MESH-001": {
+        "title": "OpenFOAM native mesh decoding incomplete",
+        "explanation": "Required polyMesh files were absent or malformed, so coordinates and connectivity could not be decoded completely.",
+        "action": "Review points, faces, owner, neighbour and boundary; retain the structured inventory fallback until the mesh source is repaired.",
+    },
+    "CRX-OF-NATIVE-TOPOLOGY-001": {
+        "title": "OpenFOAM topology consistency warning",
+        "explanation": "Decoded face, cell or patch ranges are syntactically readable but do not satisfy one or more native topology consistency checks.",
+        "action": "Review owner/neighbour lengths, point labels and patch startFace/nFaces ranges before using spatial evidence.",
+    },
+    "CRX-OF-NATIVE-FIELD-001": {
+        "title": "OpenFOAM field decoding incomplete",
+        "explanation": "A field header or internal value list could not be represented safely as a bounded lazy array.",
+        "action": "Review the field class, list count and tuple rank; use the preserved header and manifest inventory meanwhile.",
+    },
+    "CRX-OF-NATIVE-DICTIONARY-001": {
+        "title": "OpenFOAM dictionary decoding incomplete",
+        "explanation": "A property dictionary could not be parsed as literal native text without executing unsupported constructs.",
+        "action": "Review the raw dictionary and replace dynamic or generated values with explicit reviewed values when appropriate.",
+    },
+    "CRX-OF-NATIVE-BINARY-001": {
+        "title": "Binary OpenFOAM payload detected",
+        "explanation": "Gate 5B supports native OpenFOAM ASCII payloads and deliberately avoids guessing binary architecture or compact-list encodings.",
+        "action": "Provide an ASCII export for native decoding or retain the metadata-only fallback; do not relabel binary data as ASCII.",
+    },
+    "CRX-OF-NATIVE-UNSAFE-001": {
+        "title": "Executable or expandable OpenFOAM construct preserved",
+        "explanation": "An include, substitution, code stream, coded boundary condition or dynamic-library declaration was detected and not expanded or executed.",
+        "action": "Review the literal source manually or generate a trusted explicit case copy outside CaeReflex before reinspection.",
+    },
 }
 
 
