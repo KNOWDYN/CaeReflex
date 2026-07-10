@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 
 from caereflex.arrays import ArrayService
-from caereflex.contracts import CaseManifest, InspectionBudget, InspectionProfile, ManifestEntry
+from caereflex.contracts import (
+    CaseManifest,
+    ExecutionPolicy,
+    InspectionBudget,
+    InspectionProfile,
+    ManifestEntry,
+)
 from caereflex.execution import execute_inspection_plan
 from caereflex.plugins import get_adapter_plugin
 
@@ -54,6 +60,7 @@ def test_optional_pyvista_path_decodes_binary_vtu_without_mesh_generation(tmp_pa
         source_root=source,
         state_root=tmp_path / "state",
         backend_options={"disable_meshio": True},
+        policy=ExecutionPolicy(max_memory_bytes=4 * 1024 * 1024 * 1024),
     )
 
     assert result.status == "success"
