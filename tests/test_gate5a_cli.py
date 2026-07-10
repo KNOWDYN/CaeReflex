@@ -69,6 +69,9 @@ def test_deep_profile_records_execution_job(tmp_path: Path):
     assert execution["status"] == "success"
     assert execution["attempts"][0]["outcome"] == "success"
 
-    job = runner.invoke(app, ["jobs", "show", execution["job_id"], "--json"])
-    # The CLI defaults to .caereflex; this assertion only verifies the command surface.
-    assert job.exit_code in {0, 1}
+    job = runner.invoke(
+        app,
+        ["jobs", "show", execution["job_id"], "--state-root", str(state_root), "--json"],
+    )
+    assert job.exit_code == 0
+    assert json.loads(job.output)["status"] == "success"
