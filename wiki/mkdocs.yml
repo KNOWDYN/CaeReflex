@@ -28,6 +28,7 @@ nav:
       - Dimensions and Units: user-guide/dimensions-and-units.md
       - Safe Execution and Arrays: user-guide/safe-execution-and-arrays.md
       - Native OpenFOAM Inspection: user-guide/native-openfoam-inspection.md
+      - Native Gmsh Inspection: user-guide/native-gmsh-inspection.md
       - Safe Use Policy: user-guide/safe-use-policy.md
   - Learning Projects:
       - Overview: learning/index.md
@@ -65,6 +66,7 @@ nav:
       - Security: reference/security.md
   - Releases:
       - Overview: releases/index.md
+      - 2.0.0a3: releases/2.0.0a3.md
       - 2.0.0a2: releases/2.0.0a2.md
       - 2.0.0a1: releases/2.0.0a1.md
       - 1.0.0: releases/1.0.0.md
