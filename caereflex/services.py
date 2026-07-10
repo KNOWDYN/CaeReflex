@@ -45,7 +45,7 @@ def scan_path(
 
 def inspect_path(
     path: str | Path,
-    adapter: str = 'auto',
+    adapter: str = "auto",
     config: CaeReflexConfig | None = None,
     attach_crossref: bool = False,
     crossref_kwargs: dict[str, Any] | None = None,
@@ -55,7 +55,7 @@ def inspect_path(
     discover: bool = True,
 ) -> ReflexCase:
     config = config or CaeReflexConfig()
-    p = Path(path)
+    path_obj = Path(path)
     profile = InspectionProfile(profile)
     if discover and manifest is None:
         budget = InspectionBudget(
@@ -63,14 +63,14 @@ def inspect_path(
             max_depth=config.max_scan_depth,
             max_bytes_read=config.max_file_size_bytes,
         )
-        manifest = scan_case(p, profile=profile, budget=budget)
-    if adapter == 'auto':
+        manifest = scan_case(path_obj, profile=profile, budget=budget)
+    if adapter == "auto":
         if manifest is not None:
             probes = [result for result in probe_manifest(manifest) if result.supported]
-            adapter = probes[0].plugin_id if probes else detect_adapter(p)
+            adapter = probes[0].plugin_id if probes else detect_adapter(path_obj)
         else:
-            adapter = detect_adapter(p)
-    result = inspect_with_adapter(p, adapter, config=config)
+            adapter = detect_adapter(path_obj)
+    result = inspect_with_adapter(path_obj, adapter, config=config)
     if result.case is None:
         raise UnsupportedFormatError("No ReflexCase returned by adapter.")
     case = result.case
@@ -78,7 +78,7 @@ def inspect_path(
     case.inspection_profile = profile.value
     if manifest is not None:
         case.case_manifest = manifest.model_dump(mode="json")
-        case.diagnostics = [item.model_dump(mode="json") for item in manifest.diagnostics]
+        case.diagnostics.extend(item.model_dump(mode="json") for item in manifest.diagnostics)
         case.workspace.file_count_considered = len(manifest.entries)
         case.workspace.scan_depth = max((entry.depth for entry in manifest.entries), default=0)
         case.workspace.limits = {
@@ -94,8 +94,8 @@ def inspect_path(
 def inspect_with_adapter(path: str | Path, adapter: str, config: CaeReflexConfig | None = None):
     config = config or CaeReflexConfig()
     adapters = {
-        'gmsh': GmshAdapter(config), 'openfoam': OpenFOAMAdapter(config), 'vtk': VTKAdapter(config),
-        'gmsh_adapter': GmshAdapter(config), 'openfoam_adapter': OpenFOAMAdapter(config), 'vtk_adapter': VTKAdapter(config),
+        "gmsh": GmshAdapter(config), "openfoam": OpenFOAMAdapter(config), "vtk": VTKAdapter(config),
+        "gmsh_adapter": GmshAdapter(config), "openfoam_adapter": OpenFOAMAdapter(config), "vtk_adapter": VTKAdapter(config),
     }
     if adapter not in adapters:
         raise UnsupportedFormatError(f"Unsupported adapter: {adapter}")
@@ -104,16 +104,18 @@ def inspect_with_adapter(path: str | Path, adapter: str, config: CaeReflexConfig
 
 def detect_adapter(path: Path) -> str:
     if path.is_dir():
-        if (path / 'system' / 'controlDict').exists() or (path / 'constant').exists() or (path / '0').exists():
-            return 'openfoam'
-        suffixes = {f.suffix.lower() for f in path.rglob('*') if f.is_file()}
-        if suffixes & {'.geo', '.msh', '.step', '.stp', '.iges', '.igs'}:
-            return 'gmsh'
-        if suffixes & {'.vtk', '.vtu', '.vtp', '.vti', '.vtr', '.vts'}:
-            return 'vtk'
-    suf = path.suffix.lower()
-    if suf in {'.geo', '.msh', '.step', '.stp', '.iges', '.igs'}: return 'gmsh'
-    if suf in {'.vtk', '.vtu', '.vtp', '.vti', '.vtr', '.vts'}: return 'vtk'
+        if (path / "system" / "controlDict").exists() or (path / "constant").exists() or (path / "0").exists():
+            return "openfoam"
+        suffixes = {file_path.suffix.lower() for file_path in path.rglob("*") if file_path.is_file()}
+        if suffixes & {".geo", ".msh", ".step", ".stp", ".iges", ".igs"}:
+            return "gmsh"
+        if suffixes & {".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts"}:
+            return "vtk"
+    suffix = path.suffix.lower()
+    if suffix in {".geo", ".msh", ".step", ".stp", ".iges", ".igs"}:
+        return "gmsh"
+    if suffix in {".vtk", ".vtu", ".vtp", ".vti", ".vtr", ".vts"}:
+        return "vtk"
     raise UnsupportedFormatError(f"Could not detect adapter for {path}")
 
 
@@ -125,6 +127,7 @@ def doctor_report() -> dict[str, Any]:
             "typer": "typer",
             "rich": "rich",
             "fsspec": "fsspec",
+            "pint": "pint",
             "meshio": "meshio",
             "gmsh": "gmsh",
             "pyvista": "pyvista",
@@ -140,6 +143,7 @@ def doctor_report() -> dict[str, Any]:
         "python": platform.python_version(),
         "platform": platform.platform(),
         "dependencies": dependencies,
+        "units_backend": "Pint" if dependencies["pint"] else "unavailable",
         "adapters": [item.model_dump(mode="json") for item in adapter_capabilities()],
     }
 
@@ -156,11 +160,16 @@ def attach_crossref(case_or_path: ReflexCase | str | Path, **kwargs: Any) -> Ref
 
 def export_case(case_or_path: ReflexCase | str | Path, export_type: str, out: str | Path) -> Path:
     case = load_case(case_or_path) if not isinstance(case_or_path, ReflexCase) else case_or_path
-    if export_type == 'json': return export_reflexcase_json(case, out)
-    if export_type == 'agent-context': return export_agent_context_json(case, out)
-    if export_type == 'agent-context-md': return export_agent_context_md(case, out)
-    if export_type == 'markdown': return export_markdown_report(case, out)
-    if export_type == 'bibtex': return export_bibtex(case, out)
+    if export_type == "json":
+        return export_reflexcase_json(case, out)
+    if export_type == "agent-context":
+        return export_agent_context_json(case, out)
+    if export_type == "agent-context-md":
+        return export_agent_context_md(case, out)
+    if export_type == "markdown":
+        return export_markdown_report(case, out)
+    if export_type == "bibtex":
+        return export_bibtex(case, out)
     raise ValueError(f"Unknown export type: {export_type}")
 
 
@@ -174,9 +183,9 @@ def save_case(case: ReflexCase, path: str | Path) -> Path:
 
 def get_case_store_dir(workspace: str | Path | None = None) -> Path:
     root = Path(workspace) if workspace else Path.cwd()
-    d = root / '.caereflex' / 'cases'
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    directory = root / ".caereflex" / "cases"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
 
 
 def save_case_to_store(case: ReflexCase, workspace: str | Path | None = None) -> Path:
@@ -188,11 +197,11 @@ def load_case_from_store(case_id: str, workspace: str | Path | None = None) -> R
 
 
 def list_case_store(workspace: str | Path | None = None) -> list[dict[str, Any]]:
-    rows = []
-    for f in sorted(get_case_store_dir(workspace).glob('case_*.json')):
+    rows: list[dict[str, Any]] = []
+    for file_path in sorted(get_case_store_dir(workspace).glob("case_*.json")):
         try:
-            c = load_case(f)
-            rows.append({"case_id": c.case_id, "case_name": c.case_name, "case_type": c.case_type, "path": str(f)})
+            case = load_case(file_path)
+            rows.append({"case_id": case.case_id, "case_name": case.case_name, "case_type": case.case_type, "path": str(file_path)})
         except Exception:
             continue
     return rows
@@ -200,10 +209,10 @@ def list_case_store(workspace: str | Path | None = None) -> list[dict[str, Any]]
 
 def examples_root() -> Path | None:
     here = Path(__file__).resolve()
-    candidates = [Path.cwd() / 'examples', here.parents[1] / 'examples', here.parents[2] / 'examples']
-    for c in candidates:
-        if c.exists() and all((c / name).exists() for name in ['gmsh_minimal','openfoam_cavity_minimal']):
-            return c
+    candidates = [Path.cwd() / "examples", here.parents[1] / "examples", here.parents[2] / "examples"]
+    for candidate in candidates:
+        if candidate.exists() and all((candidate / name).exists() for name in ["gmsh_minimal", "openfoam_cavity_minimal"]):
+            return candidate
     return None
 
 
@@ -211,26 +220,35 @@ def list_examples() -> list[str]:
     root = examples_root()
     if not root:
         return []
-    return [n for n in EXAMPLE_NAMES if (root / n).exists()]
+    return [name for name in EXAMPLE_NAMES if (root / name).exists()]
 
 
-def run_example(name: str, out_dir: str | Path = 'build') -> dict[str, Any]:
+def run_example(name: str, out_dir: str | Path = "build") -> dict[str, Any]:
     root = examples_root()
     if not root:
         raise FileNotFoundError("Bundled examples were not found. Run this from the source package root or use the source zip examples/ directory.")
     if name not in EXAMPLE_NAMES:
         raise ValueError(f"Unknown example: {name}")
-    out = Path(out_dir); out.mkdir(parents=True, exist_ok=True)
-    if name == 'openfoam_cavity_minimal':
-        case = inspect_path(root / name, adapter='openfoam')
-    elif name == 'gmsh_minimal':
-        case = inspect_path(root / name / 't1.geo', adapter='gmsh')
-    elif name == 'vtk_minimal':
-        case = inspect_path(root / name / 'sample.vtk', adapter='vtk')
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    if name == "openfoam_cavity_minimal":
+        case = inspect_path(root / name, adapter="openfoam")
+    elif name == "gmsh_minimal":
+        case = inspect_path(root / name / "t1.geo", adapter="gmsh")
+    elif name == "vtk_minimal":
+        case = inspect_path(root / name / "sample.vtk", adapter="vtk")
     else:
         return {"status": "success", "example": name, "message": "Context example; inspect README.md for workflow."}
     case_path = out / f"{name}.caereflex.json"
-    ctx_path = out / f"{name}.agent_context.json"
+    context_path = out / f"{name}.agent_context.json"
     report_path = out / f"{name}.case_report.md"
-    save_case(case, case_path); export_case(case, 'agent-context', ctx_path); export_case(case, 'markdown', report_path)
-    return {"status": case.inspection.status.value if hasattr(case.inspection.status, "value") else str(case.inspection.status), "example": name, "case_id": case.case_id, "outputs": {"case": str(case_path), "agent_context": str(ctx_path), "report": str(report_path)}}
+    save_case(case, case_path)
+    export_case(case, "agent-context", context_path)
+    export_case(case, "markdown", report_path)
+    status = case.inspection.status.value if hasattr(case.inspection.status, "value") else str(case.inspection.status)
+    return {
+        "status": status,
+        "example": name,
+        "case_id": case.case_id,
+        "outputs": {"case": str(case_path), "agent_context": str(context_path), "report": str(report_path)},
+    }

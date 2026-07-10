@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from caereflex.cli.units import units_app
 from caereflex.contracts import InspectionBudget, InspectionProfile
 from caereflex.core.config import CaeReflexConfig
 from caereflex.core.models import ReflexCase
@@ -29,6 +30,7 @@ def group(name: str, help_text: str) -> typer.Typer:
     app.add_typer(item, name=name)
     return item
 
+
 crossref_app = group("crossref", "CrossRef metadata commands.")
 export_app = group("export", "Export commands.")
 examples_app = group("examples", "Bundled examples.")
@@ -36,6 +38,7 @@ adapters_app = group("adapters", "Inspect adapter capabilities and probe manifes
 schema_app = group("schema", "Inspect and validate schemas.")
 diagnostics_app = group("diagnostics", "Explain stable diagnostic codes.")
 cache_app = group("cache", "Manage the catalogue cache.")
+app.add_typer(units_app, name="units")
 
 
 def emit(data: dict[str, Any], json_mode: bool = False) -> None:
@@ -137,18 +140,20 @@ def inspect_cmd(
     max_scan_depth: int = 3,
     max_scan_files: int = 500,
 ) -> None:
-    cfg = CaeReflexConfig(max_file_size_mb=max_file_size_mb, max_scan_depth=max_scan_depth, max_scan_files=max_scan_files)
-    manifest, _ = scan_path(path, profile=profile, budget=InspectionBudget(max_files=max_scan_files, max_depth=max_scan_depth, max_bytes_read=cfg.max_file_size_bytes))
+    config = CaeReflexConfig(max_file_size_mb=max_file_size_mb, max_scan_depth=max_scan_depth, max_scan_files=max_scan_files)
+    manifest, _ = scan_path(path, profile=profile, budget=InspectionBudget(max_files=max_scan_files, max_depth=max_scan_depth, max_bytes_read=config.max_file_size_bytes))
     if manifest_out:
         manifest_out.parent.mkdir(parents=True, exist_ok=True)
         manifest_out.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
-    case = inspect_path(path, adapter=adapter, config=cfg, attach_crossref=attach_crossref_flag, crossref_kwargs={"limit": crossref_limit}, profile=profile, manifest=manifest)
+    case = inspect_path(path, adapter=adapter, config=config, attach_crossref=attach_crossref_flag, crossref_kwargs={"limit": crossref_limit}, profile=profile, manifest=manifest)
     save_case(case, out)
     outputs = {"caereflex_json": str(out)}
     if agent_context:
-        export_case(case, "agent-context", agent_context); outputs["agent_context"] = str(agent_context)
+        export_case(case, "agent-context", agent_context)
+        outputs["agent_context"] = str(agent_context)
     if report:
-        export_case(case, "markdown", report); outputs["report"] = str(report)
+        export_case(case, "markdown", report)
+        outputs["report"] = str(report)
     if manifest_out:
         outputs["manifest"] = str(manifest_out)
     data = {"status": status_value(case.inspection.status), "case_id": case.case_id, "summary": case.agent_summary.summary, "outputs": outputs, "warnings": [flag.message for flag in case.inspection_flags]}
@@ -183,7 +188,8 @@ def inspect_vtk(path: Path, out: Path = typer.Option(Path("vtk_case.json")), jso
 def adapters_list(json_mode: bool = typer.Option(False, "--json")) -> None:
     items = [item.model_dump(mode="json") for item in adapter_capabilities()]
     if json_mode:
-        emit({"adapters": items}, True); return
+        emit({"adapters": items}, True)
+        return
     table = Table(title="CaeReflex adapters")
     for heading in ("Plugin", "Formats", "Geometry", "Fields"):
         table.add_column(heading)
@@ -197,7 +203,7 @@ def adapters_info(plugin_id: str, json_mode: bool = typer.Option(False, "--json"
     plugin = get_adapter_plugin(plugin_id)
     if plugin is None:
         raise typer.BadParameter(f"Unknown adapter plugin: {plugin_id}")
-    emit(plugin.capabilities().model_dump(mode="json"), True if json_mode else True)
+    emit(plugin.capabilities().model_dump(mode="json"), True)
 
 
 @adapters_app.command("probe")
@@ -205,7 +211,8 @@ def adapters_probe(path: str, json_mode: bool = typer.Option(False, "--json")) -
     manifest, _ = scan_path(path)
     results = [item.model_dump(mode="json") for item in probe_manifest(manifest)]
     if json_mode:
-        emit({"manifest_id": manifest.manifest_id, "probes": results}, True); return
+        emit({"manifest_id": manifest.manifest_id, "probes": results}, True)
+        return
     table = Table(title=f"Adapter probe · {manifest.manifest_id}")
     for heading in ("Plugin", "Supported", "Score", "Reasons"):
         table.add_column(heading)
@@ -228,7 +235,8 @@ def schema_validate(case_json: Path, json_mode: bool = typer.Option(False, "--js
 @diagnostics_app.command("list")
 def diagnostics_list(json_mode: bool = typer.Option(False, "--json")) -> None:
     if json_mode:
-        emit({"diagnostics": DIAGNOSTICS}, True); return
+        emit({"diagnostics": DIAGNOSTICS}, True)
+        return
     for code, item in DIAGNOSTICS.items():
         console.print(f"[bold]{code}[/bold] — {item['title']}")
 
@@ -302,12 +310,14 @@ def examples_run(name: str, out_dir: Path = Path("build"), json_mode: bool = typ
 @app.command("serve")
 def serve(host: str = "127.0.0.1", port: int = 8765, workspace: Path = Path("."), api_key: str | None = None) -> None:
     if host not in {"127.0.0.1", "localhost"} and not api_key:
-        console.print("[red]API key is mandatory outside localhost.[/red]"); raise typer.Exit(5)
+        console.print("[red]API key is mandatory outside localhost.[/red]")
+        raise typer.Exit(5)
     try:
         import uvicorn
         from caereflex.server.app import create_app
     except Exception as exc:
-        console.print(f"[red]Install [server] extras to run the REST server: {exc}[/red]"); raise typer.Exit(4)
+        console.print(f"[red]Install [server] extras to run the REST server: {exc}[/red]")
+        raise typer.Exit(4)
     uvicorn.run(create_app(workspace=workspace, api_key=api_key, host=host), host=host, port=port)
 
 

@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from caereflex.core.provenance import utc_now_iso
 
-CONTRACT_VERSION = "2.0-alpha.1"
+CONTRACT_VERSION = "2.0-alpha.2"
 
 
 class EvidenceState(str, Enum):
@@ -37,6 +37,13 @@ class DiagnosticSeverity(str, Enum):
     info = "info"
     warning = "warning"
     error = "error"
+
+
+class DimensionalConsistencyStatus(str, Enum):
+    consistent = "consistent"
+    conflicted = "conflicted"
+    unresolved = "unresolved"
+    not_applicable = "not_applicable"
 
 
 class ManifestRole(str, Enum):
@@ -88,6 +95,25 @@ class QuantityEvidence(EvidenceValue):
     quantity_kind: str | None = None
     normalized_magnitude: float | int | list[float] | None = None
     normalized_unit: str | None = None
+    unit_system: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DimensionalCheck(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
+    check_id: str
+    status: DimensionalConsistencyStatus
+    subject_name: str
+    context: str
+    observed_dimension_vector: tuple[float, float, float, float, float, float, float] | None = None
+    resolved_quantity_kind: str | None = None
+    expected_quantity_kinds: list[str] = Field(default_factory=list)
+    dimension_compatible_kinds: list[str] = Field(default_factory=list)
+    message: str
+    evidence_paths: list[str] = Field(default_factory=list)
+    diagnostic_code: str | None = None
+    blocks_automated_interpretation: bool = False
 
 
 class ArrayRef(BaseModel):

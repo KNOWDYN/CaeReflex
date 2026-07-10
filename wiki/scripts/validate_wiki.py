@@ -64,6 +64,14 @@ def cli_commands() -> set[str]:
     for variable, prefix in groups.items():
         pattern = rf'@{re.escape(variable)}\.command\("([^"]+)"\)'
         commands.update(f"{prefix} {name}" for name in re.findall(pattern, text))
+
+    mounted_groups = {
+        ROOT / "caereflex" / "cli" / "units.py": ("units_app", "units"),
+    }
+    for path, (variable, prefix) in mounted_groups.items():
+        mounted_text = read(path)
+        pattern = rf'@{re.escape(variable)}\.command\("([^"]+)"\)'
+        commands.update(f"{prefix} {name}" for name in re.findall(pattern, mounted_text))
     return commands
 
 
