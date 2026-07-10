@@ -27,6 +27,8 @@ class BuiltinAdapterPlugin:
     _capabilities: AdapterCapabilities
     format_hints: frozenset[str]
     case_hints: frozenset[str]
+    backend_candidates: tuple[str, ...] = ("core.manifest-audit",)
+    native_required_paths: frozenset[str] = frozenset()
 
     def capabilities(self) -> AdapterCapabilities:
         return self._capabilities
@@ -47,8 +49,29 @@ class BuiltinAdapterPlugin:
         profile: InspectionProfile,
         budget: InspectionBudget,
     ) -> InspectionPlan:
-        paths = [entry.path for entry in manifest.entries if entry.format_hint in self.format_hints or entry.case_hint in self.case_hints]
-        return InspectionPlan(plugin_id=self.plugin_id, profile=profile, selected_paths=paths, budget=budget)
+        paths = [
+            entry.path
+            for entry in manifest.entries
+            if not entry.is_dir and (entry.format_hint in self.format_hints or entry.case_hint in self.case_hints)
+        ]
+        available = {path[:-3] if path.lower().endswith(".gz") else path for path in paths}
+        requirements_met = self.native_required_paths.issubset(available)
+        candidates = list(self.backend_candidates)
+        if self.native_required_paths and not requirements_met:
+            candidates = [item for item in candidates if not item.endswith(".native")]
+        if "core.manifest-audit" not in candidates:
+            candidates.append("core.manifest-audit")
+        return InspectionPlan(
+            plugin_id=self.plugin_id,
+            profile=profile,
+            selected_paths=paths,
+            budget=budget,
+            backend_candidates=candidates,
+            metadata={
+                "native_requirements_met": requirements_met,
+                "native_required_paths": sorted(self.native_required_paths),
+            },
+        )
 
 
 _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
@@ -72,22 +95,37 @@ _BUILTINS: tuple[BuiltinAdapterPlugin, ...] = (
     ),
     BuiltinAdapterPlugin(
         plugin_id="openfoam",
-        plugin_version="1.1.0",
+        plugin_version="1.2.0",
         _capabilities=AdapterCapabilities(
             plugin_id="openfoam",
-            plugin_version="1.1.0",
-            formats=["openfoam-case"],
-            geometry_support="case-inventory",
-            topology_support="boundary-summary",
-            field_support="class-header-dimensions-and-lightweight-text",
-            time_series_support=False,
+            plugin_version="1.2.0",
+            formats=["openfoam-case", "openfoam-dictionary", "openfoam-field"],
+            geometry_support="native-ascii-points-and-bounds",
+            topology_support="native-ascii-faces-owner-neighbour-and-boundary",
+            field_support="native-ascii-uniform-and-nonuniform-lazy-arrays",
+            time_series_support=True,
             units_support="seven-component-dimension-vector-and-Pint-validation",
-            fallback_modes=["structured-dimension-evidence", "raw-text-with-diagnostic", "forensic-text"],
+            fallback_modes=[
+                "structured-boundary-inventory",
+                "manifest-field-inventory",
+                "raw-text-with-diagnostic",
+                "core-manifest-audit",
+            ],
             optional_dependencies=[],
             licence="CaeReflex Research Source Licence; Pint is BSD-licensed core dependency",
         ),
         format_hints=frozenset({"openfoam-case", "openfoam-dictionary", "openfoam-field"}),
         case_hints=frozenset({"openfoam"}),
+        backend_candidates=("openfoam.native", "core.manifest-audit"),
+        native_required_paths=frozenset(
+            {
+                "constant/polyMesh/points",
+                "constant/polyMesh/faces",
+                "constant/polyMesh/owner",
+                "constant/polyMesh/neighbour",
+                "constant/polyMesh/boundary",
+            }
+        ),
     ),
     BuiltinAdapterPlugin(
         plugin_id="vtk",
