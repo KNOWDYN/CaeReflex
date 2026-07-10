@@ -6,6 +6,8 @@ are intentionally deferred to later PRs.
 from __future__ import annotations
 
 import os
+import socket
+import subprocess
 import time
 from typing import Any
 
@@ -51,6 +53,18 @@ class TestExecutionBackend:
             relative_path = str(request.backend_options["path"])
             payload = context.read_bytes(relative_path, length=int(request.backend_options.get("length", 64)))
             return {"summary": {"bytes": len(payload), "sha_prefix": payload[:8].hex()}}
+        elif mode == "mutate":
+            relative_path = str(request.backend_options.get("path", "input.dat"))
+            path = context.resolve_source(relative_path)
+            path.write_bytes(str(request.backend_options.get("content", "mutated")).encode("utf-8"))
+            return {"summary": {"mutated": relative_path}}
+        elif mode == "network":
+            socket.socket()
+        elif mode == "subprocess":
+            subprocess.run(["echo", "blocked"], check=True)
+        elif mode == "environment":
+            key = str(request.backend_options.get("key", "CAEREFLEX_SECRET_FIXTURE"))
+            return {"summary": {"key": key, "present": key in os.environ}}
         elif mode == "emit_array":
             values = request.backend_options.get("values", [0.0, 1.0, 2.0, 3.0])
             shape = tuple(request.backend_options.get("shape", [len(values)]))
