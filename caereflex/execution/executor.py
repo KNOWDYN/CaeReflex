@@ -54,6 +54,26 @@ def _normalise_source_root(source_root: str | Path) -> Path:
     return candidate.parent if candidate.is_file() else candidate
 
 
+def _validate_plan(manifest: CaseManifest, plan: InspectionPlan, backend_id: str) -> None:
+    if plan.backend_candidates and backend_id not in plan.backend_candidates:
+        raise InspectionExecutionError(
+            f"Backend {backend_id!r} is not declared in InspectionPlan.backend_candidates."
+        )
+    if len(plan.selected_paths) > plan.budget.max_files:
+        raise InspectionExecutionError(
+            f"Inspection plan selects {len(plan.selected_paths)} paths but max_files is {plan.budget.max_files}."
+        )
+    manifest_paths = {entry.path for entry in manifest.entries}
+    for selected in plan.selected_paths:
+        path = Path(selected)
+        if path.is_absolute() or ".." in path.parts:
+            raise InspectionExecutionError(f"Inspection plan contains an unsafe relative path: {selected}")
+        if selected not in manifest_paths:
+            raise InspectionExecutionError(
+                f"Inspection plan selected a path that is absent from the case manifest: {selected}"
+            )
+
+
 def _snapshot_sources(
     source_root: Path,
     selected_paths: list[str],
@@ -202,8 +222,16 @@ def execute_inspection_plan(
         raise InspectionExecutionError(
             "state_root must be outside the inspected source root so execution cannot write into engineering sources"
         )
-    state_root_path.mkdir(parents=True, exist_ok=True)
+    _validate_plan(manifest, plan, backend_id)
     policy = policy or ExecutionPolicy()
+    before, before_complete = _snapshot_sources(
+        source_root_path,
+        plan.selected_paths,
+        max_files=plan.budget.max_files,
+        max_hash_bytes=policy.max_source_hash_bytes,
+    )
+
+    state_root_path.mkdir(parents=True, exist_ok=True)
     job_id = f"job_{uuid.uuid4().hex[:24]}"
     execution_id = f"execution_{uuid.uuid4().hex[:24]}"
     job_directory = state_root_path / "jobs" / job_id
@@ -240,12 +268,6 @@ def execute_inspection_plan(
     )
     jobs.put(job)
 
-    before, before_complete = _snapshot_sources(
-        source_root_path,
-        plan.selected_paths,
-        max_files=plan.budget.max_files,
-        max_hash_bytes=policy.max_source_hash_bytes,
-    )
     started_at = utc_now_iso()
     started_clock = time.monotonic()
     job.status = ExecutionStatus.running
