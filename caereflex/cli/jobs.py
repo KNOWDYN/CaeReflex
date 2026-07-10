@@ -8,20 +8,25 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from caereflex.core.config import CaeReflexConfig
 from caereflex.jobs import JobStore, JobStoreError
 
 jobs_app = typer.Typer(help="Inspect local execution-job records.", no_args_is_help=True)
 console = Console()
 
 
+def _store(state_root: Path | None) -> JobStore:
+    return JobStore(state_root or CaeReflexConfig().execution_state_dir)
+
+
 @jobs_app.command("list")
 def list_jobs(
-    state_root: Path = typer.Option(Path(".caereflex"), "--state-root"),
+    state_root: Path | None = typer.Option(None, "--state-root"),
     limit: int = typer.Option(100, min=1, max=1000),
     status: str | None = typer.Option(None),
     json_mode: bool = typer.Option(False, "--json"),
 ) -> None:
-    rows = [item.model_dump(mode="json") for item in JobStore(state_root).list(limit, status=status)]
+    rows = [item.model_dump(mode="json") for item in _store(state_root).list(limit, status=status)]
     if json_mode:
         typer.echo(json.dumps({"jobs": rows}, indent=2, ensure_ascii=False, default=str))
         return
@@ -42,11 +47,11 @@ def list_jobs(
 @jobs_app.command("show")
 def show_job(
     job_id: str,
-    state_root: Path = typer.Option(Path(".caereflex"), "--state-root"),
+    state_root: Path | None = typer.Option(None, "--state-root"),
     json_mode: bool = typer.Option(False, "--json"),
 ) -> None:
     try:
-        payload = JobStore(state_root).get(job_id).model_dump(mode="json")
+        payload = _store(state_root).get(job_id).model_dump(mode="json")
     except JobStoreError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(1)
