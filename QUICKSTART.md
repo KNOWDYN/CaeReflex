@@ -1,6 +1,6 @@
 # Quickstart
 
-Check the installation, units backend, execution runtime and case manifest:
+Check the installation, units backend, execution runtime and case manifests:
 
 ```bash
 caereflex doctor
@@ -8,13 +8,16 @@ caereflex units parse "25 degC" --json
 caereflex units convert 1 bar Pa --json
 caereflex units check "m/s" velocity --name U --json
 caereflex execution backends
+
 caereflex scan examples/openfoam_cavity_minimal --out openfoam-manifest.json
 caereflex adapters probe examples/openfoam_cavity_minimal
 caereflex scan examples/gmsh_minimal/t1.geo --out gmsh-manifest.json
 caereflex adapters probe examples/gmsh_minimal/t1.geo
+caereflex scan examples/vtk_minimal/sample.vtk --out vtk-manifest.json
+caereflex adapters probe examples/vtk_minimal/sample.vtk
 ```
 
-Run a bounded execution backend directly:
+Run bounded execution backends directly:
 
 ```bash
 caereflex execution run openfoam-manifest.json \
@@ -27,6 +30,11 @@ caereflex execution run gmsh-manifest.json \
   --backend gmsh.native \
   --json
 
+caereflex execution run vtk-manifest.json \
+  --source-root examples/vtk_minimal/sample.vtk \
+  --backend vtk.native \
+  --json
+
 caereflex jobs list
 ```
 
@@ -36,19 +44,24 @@ Offline deep-inspection paths:
 caereflex inspect examples/openfoam_cavity_minimal \
   --adapter openfoam \
   --profile deep \
-  --manifest-out openfoam-manifest.json \
   --out openfoam.caereflex.json
 
 caereflex inspect examples/gmsh_minimal/t1.geo \
   --adapter gmsh \
   --profile deep \
-  --manifest-out gmsh-manifest.json \
   --out gmsh.caereflex.json
+
+caereflex inspect examples/vtk_minimal/sample.vtk \
+  --adapter vtk \
+  --profile deep \
+  --out vtk.caereflex.json
 ```
 
-For the bundled OpenFOAM case, inspect `quantity_evidence`, `dimensional_checks`, `units_summary`, `metadata.native_openfoam` and `metadata.inspection_execution`. Expected semantic reads include velocity `U`, incompressible kinematic pressure `p`, and kinematic viscosity `nu`.
+For OpenFOAM, inspect `quantity_evidence`, `dimensional_checks`, `units_summary`, `metadata.native_openfoam` and `metadata.inspection_execution`.
 
-For the bundled Gmsh file, inspect `metadata.native_gmsh`. The `.geo` file is parsed as declarations and is never executed. A decoded `.msh` can expose physical groups, entities, topology and fields through lazy array handles.
+For Gmsh, inspect `metadata.native_gmsh`. A `.geo` file is parsed as declarations and is never executed. A decoded `.msh` can expose physical groups, entities, topology and fields.
+
+For VTK, inspect `metadata.native_vtk`. Supported datasets can expose points, bounds, topology and point/cell/field arrays. Collections and parallel metadata expose reference and time inventories without hidden reference loading.
 
 Query a registered array without embedding it in ReflexCase JSON:
 
@@ -67,6 +80,6 @@ caereflex crossref attach examples/crossref_context/sample_case.json \
 caereflex export bibtex caereflex.with_literature.json --out references.bib
 ```
 
-OpenFOAM and Gmsh native readers are bounded and read-only. VTK native decoding remains deferred. A successful execution or dimensional check does not validate the model, prove convergence, assess mesh adequacy, certify the result or establish design safety.
+OpenFOAM, Gmsh and VTK native readers are bounded and read-only. Successful decoding or dimensional consistency does not validate the model, prove convergence, assess mesh adequacy, certify the result or establish design safety.
 
 See `docs/GATES_1_3_FOUNDATION.md`, `docs/GATE_4_DIMENSIONS_UNITS.md`, `docs/GATE_5A_SAFE_EXECUTION_RUNTIME.md`, `docs/CLI_FOUNDATION.md`, and `docs/ADAPTER_PLUGIN_CONTRACT.md`.
