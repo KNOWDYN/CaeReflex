@@ -10,8 +10,15 @@ from typing import Any
 from caereflex.contracts import AttemptOutcome, InspectionExecutionRequest, ParserAttempt
 from caereflex.core.provenance import utc_now_iso
 from caereflex.execution.context import ExecutionContext
-from caereflex.execution.gmsh_native import GmshNativeBackend
+from caereflex.execution import gmsh_native as _gmsh_native
+from caereflex.execution.gmsh_api import gmsh_api_summary
 from caereflex.execution.openfoam_native import OpenFOAMNativeBackend
+
+# Gmsh releases return either Python lists or NumPy-like arrays from the same API
+# calls. Keep the large format reader independent while installing the narrowly
+# scoped, dependency-free compatibility function used only by explicit API opt-in.
+_gmsh_native._gmsh_api_summary = gmsh_api_summary
+GmshNativeBackend = _gmsh_native.GmshNativeBackend
 
 
 class ManifestAuditBackend:
