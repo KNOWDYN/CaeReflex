@@ -8,13 +8,14 @@ CaeReflex is source-available software owned and licensed by **KNOWDYN LTD (UK)*
 
 | Version | Security support | Status |
 | --- | ---: | --- |
-| `2.0.0a3` | Supported | Active 2.x alpha line |
+| `2.0.0a4` | Supported | Active 2.x alpha line |
+| `2.0.0a3` | Critical fixes only | Superseded alpha |
 | `2.0.0a2` | Critical fixes only | Superseded alpha |
 | `2.0.0a1` | Critical fixes only | Superseded alpha |
 | `1.0.0` | Critical fixes only | Maintenance during the alpha transition |
 | Earlier versions | Not supported | Upgrade required |
 
-The `2.0.0a3` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
+The `2.0.0a4` package uses ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`. Reports should identify all three versions where relevant.
 
 ## Reporting security issues
 
@@ -126,6 +127,21 @@ STEP, IGES and BREP files are fingerprinted by default. The optional Gmsh API pa
 - may still execute native-library code outside Python-level guards.
 
 Use stronger external isolation for untrusted CAD or mesh files. Any unintended `.geo` execution, system-call execution, mesh generation or source mutation is a security defect.
+
+## Native VTK boundary
+
+`vtk.native` uses an ordered evidence path:
+
+1. optional PyVista/VTK for supported trusted datasets;
+2. optional meshio;
+3. dependency-free bounded legacy-ASCII or XML-inline decoding;
+4. fingerprint-only evidence.
+
+The core reader rejects binary legacy payloads and XML appended, compressed, DTD or entity-bearing inputs unless an available optional reader handles the dataset. Native libraries execute inside the worker but remain outside a complete operating-system sandbox.
+
+Collection and parallel metadata such as `.pvd`, `.vtm`, `.pvtu` and related formats are inventoried only. CaeReflex validates relative references against the selected manifest and records time values, but it does not automatically fetch, traverse or open external references. Unsafe `..`, absolute or unselected references remain unresolved.
+
+CaeReflex never launches ParaView, executes a pipeline, evaluates programmable filters, repairs datasets or infers coordinate and field units. Any hidden reference fetch, external-program launch or source mutation is a security defect.
 
 ## Artefact and lazy-array security
 
