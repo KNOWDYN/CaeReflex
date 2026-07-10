@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import subprocess
 import sys
@@ -40,6 +39,14 @@ def _file_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
 def _snapshot_sources(
     source_root: Path,
     selected_paths: list[str],
@@ -52,11 +59,14 @@ def _snapshot_sources(
     hashed_bytes = 0
     candidates: list[Path] = []
     for relative_path in selected_paths:
-        candidate = (source_root / relative_path).resolve()
-        try:
-            candidate.relative_to(source_root)
-        except ValueError as exc:
-            raise InspectionExecutionError(f"Selected path escapes the source root: {relative_path}") from exc
+        unresolved = source_root / relative_path
+        if unresolved.is_symlink():
+            candidate = unresolved
+        else:
+            candidate = unresolved.resolve()
+        resolved_for_boundary = candidate.resolve()
+        if not _is_within(resolved_for_boundary, source_root):
+            raise InspectionExecutionError(f"Selected path escapes the source root: {relative_path}")
         if candidate.is_dir():
             for child in sorted(candidate.rglob("*")):
                 if child.is_file() or child.is_symlink():
@@ -104,11 +114,8 @@ def _sanitized_environment(policy: ExecutionPolicy) -> dict[str, str]:
     if not policy.sanitize_environment:
         environment = dict(os.environ)
     else:
-        environment = {
-            key: value
-            for key, value in os.environ.items()
-            if key in set(policy.environment_allowlist)
-        }
+        allowed = set(policy.environment_allowlist)
+        environment = {key: value for key, value in os.environ.items() if key in allowed}
     environment.update(
         {
             "PYTHONNOUSERSITE": "1",
@@ -186,6 +193,10 @@ def execute_inspection_plan(
     if not source_root_path.exists() or not source_root_path.is_dir():
         raise InspectionExecutionError("source_root must be an existing directory")
     state_root_path = Path(state_root).expanduser().resolve()
+    if _is_within(state_root_path, source_root_path):
+        raise InspectionExecutionError(
+            "state_root must be outside the inspected source root so execution cannot write into engineering sources"
+        )
     state_root_path.mkdir(parents=True, exist_ok=True)
     policy = policy or ExecutionPolicy()
     job_id = f"job_{uuid.uuid4().hex[:24]}"
@@ -238,73 +249,88 @@ def execute_inspection_plan(
 
     command = [sys.executable, "-m", "caereflex.execution.worker", str(request_path), str(result_path)]
     with log_path.open("wb") as log_handle:
-        process = subprocess.Popen(
-            command,
-            cwd=str(job_directory),
-            env=_sanitized_environment(policy),
-            stdin=subprocess.DEVNULL,
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-        )
         try:
-            process.wait(timeout=plan.budget.max_wall_time_seconds)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+            process = subprocess.Popen(
+                command,
+                cwd=str(job_directory),
+                env=_sanitized_environment(policy),
+                stdin=subprocess.DEVNULL,
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+            )
+        except OSError as exc:
             elapsed = time.monotonic() - started_clock
             result = _terminal_result(
                 request,
-                status=ExecutionStatus.timed_out,
-                code="CRX-EXEC-TIMEOUT-001",
-                message=f"Execution exceeded {plan.budget.max_wall_time_seconds} seconds and was terminated.",
-                outcome=AttemptOutcome.timed_out,
+                status=ExecutionStatus.failed,
+                code="CRX-EXEC-START-001",
+                message=f"Execution worker could not be started: {exc}",
+                outcome=AttemptOutcome.failed,
                 started_at=started_at,
                 elapsed_seconds=elapsed,
-                worker_exit_code=process.returncode,
+                worker_exit_code=None,
                 log_path=log_path,
             )
         else:
-            elapsed = time.monotonic() - started_clock
-            if not result_path.exists():
+            try:
+                process.wait(timeout=plan.budget.max_wall_time_seconds)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+                elapsed = time.monotonic() - started_clock
                 result = _terminal_result(
                     request,
-                    status=ExecutionStatus.crashed,
-                    code="CRX-EXEC-CRASH-001",
-                    message=f"Execution worker exited with code {process.returncode} without a result payload.",
-                    outcome=AttemptOutcome.crashed,
-                    started_at=started_at,
-                    elapsed_seconds=elapsed,
-                    worker_exit_code=process.returncode,
-                    log_path=log_path,
-                )
-            elif result_path.stat().st_size > policy.max_result_bytes:
-                result = _terminal_result(
-                    request,
-                    status=ExecutionStatus.failed,
-                    code="CRX-EXEC-RESULT-001",
-                    message="Execution result exceeded the configured serialized-result limit.",
-                    outcome=AttemptOutcome.failed,
+                    status=ExecutionStatus.timed_out,
+                    code="CRX-EXEC-TIMEOUT-001",
+                    message=f"Execution exceeded {plan.budget.max_wall_time_seconds} seconds and was terminated.",
+                    outcome=AttemptOutcome.timed_out,
                     started_at=started_at,
                     elapsed_seconds=elapsed,
                     worker_exit_code=process.returncode,
                     log_path=log_path,
                 )
             else:
-                try:
-                    result = InspectionExecutionResult.model_validate_json(result_path.read_text(encoding="utf-8"))
-                    result.worker_exit_code = process.returncode
-                except Exception as exc:
+                elapsed = time.monotonic() - started_clock
+                if not result_path.exists():
+                    result = _terminal_result(
+                        request,
+                        status=ExecutionStatus.crashed,
+                        code="CRX-EXEC-CRASH-001",
+                        message=f"Execution worker exited with code {process.returncode} without a result payload.",
+                        outcome=AttemptOutcome.crashed,
+                        started_at=started_at,
+                        elapsed_seconds=elapsed,
+                        worker_exit_code=process.returncode,
+                        log_path=log_path,
+                    )
+                elif result_path.stat().st_size > policy.max_result_bytes:
                     result = _terminal_result(
                         request,
                         status=ExecutionStatus.failed,
                         code="CRX-EXEC-RESULT-001",
-                        message=f"Execution result could not be validated: {exc}",
+                        message="Execution result exceeded the configured serialized-result limit.",
                         outcome=AttemptOutcome.failed,
                         started_at=started_at,
                         elapsed_seconds=elapsed,
                         worker_exit_code=process.returncode,
                         log_path=log_path,
                     )
+                else:
+                    try:
+                        result = InspectionExecutionResult.model_validate_json(result_path.read_text(encoding="utf-8"))
+                        result.worker_exit_code = process.returncode
+                    except Exception as exc:
+                        result = _terminal_result(
+                            request,
+                            status=ExecutionStatus.failed,
+                            code="CRX-EXEC-RESULT-001",
+                            message=f"Execution result could not be validated: {exc}",
+                            outcome=AttemptOutcome.failed,
+                            started_at=started_at,
+                            elapsed_seconds=elapsed,
+                            worker_exit_code=process.returncode,
+                            log_path=log_path,
+                        )
 
     after, after_complete = _snapshot_sources(
         source_root_path,
@@ -313,7 +339,10 @@ def execute_inspection_plan(
         max_hash_bytes=policy.max_source_hash_bytes,
     )
     result.source_snapshot_complete = before_complete and after_complete
-    if before != after:
+    changed_paths = sorted(
+        path for path in set(before) | set(after) if before.get(path) != after.get(path)
+    )
+    if changed_paths:
         result.source_mutation_detected = True
         diagnostic = DiagnosticEvent(
             code="CRX-EXEC-SOURCE-MUTATION-001",
@@ -321,7 +350,7 @@ def execute_inspection_plan(
             message="One or more inspected source files changed during isolated execution.",
             parser="caereflex.execution.executor",
             details={
-                "changed_paths": sorted(set(before) | set(after)),
+                "changed_paths": changed_paths,
                 "snapshot_complete": result.source_snapshot_complete,
             },
         )
