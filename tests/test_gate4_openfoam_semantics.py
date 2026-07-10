@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from caereflex.contracts import CONTRACT_VERSION
 from caereflex.exporters import agent_context_dict
 from caereflex.services import inspect_path
 
@@ -13,7 +14,7 @@ def test_openfoam_fixture_has_exact_field_classes_and_dimensions():
     fields = _by_name(case.result_fields)
     materials = _by_name(case.materials)
 
-    assert case.contract_version == "2.0-alpha.2"
+    assert case.contract_version == CONTRACT_VERSION
     assert fields["U"].field_type == "vector"
     assert fields["U"].components == 3
     assert fields["U"].metadata["field_class"] == "volVectorField"
