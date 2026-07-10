@@ -1,9 +1,9 @@
 """Read-only OpenFOAM ASCII parsing primitives.
 
-The parser understands the native text representation used by OpenFOAM mesh and
-field files. It never expands includes, substitutions, code streams, dynamic code,
-or coded boundary conditions. Binary payloads are detected and reported as an
-unsupported native representation rather than guessed.
+The parser understands bounded native text representations used by OpenFOAM mesh
+and field files. It never expands includes, substitutions, code streams, dynamic
+code, libraries or coded boundary conditions. Binary payloads are detected and
+reported as unsupported rather than guessed.
 """
 from __future__ import annotations
 
@@ -14,21 +14,20 @@ from io import BytesIO
 import re
 from typing import Any, Iterable
 
-
 _NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
-_INT_RE = re.compile(r"[+-]?\d+")
 _NUMBER_RE = re.compile(_NUMBER)
+_INT_RE = re.compile(r"[+-]?\d+")
 _FOAMFILE_RE = re.compile(r"\bFoamFile\s*\{(.*?)\}", re.DOTALL)
 _SIMPLE_ENTRY_RE = re.compile(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_.:-]*)\s+([^;{}]+);")
-_TIME_RE = re.compile(r"^(?:0|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)$")
+_TIME_RE = re.compile(rf"^(?:0|{_NUMBER})$")
 
 
 class OpenFOAMNativeError(ValueError):
-    """Raised when native OpenFOAM text is malformed or internally inconsistent."""
+    """Raised when native OpenFOAM text is malformed or inconsistent."""
 
 
 class OpenFOAMUnsupportedError(OpenFOAMNativeError):
-    """Raised for detected representations that this reader intentionally avoids."""
+    """Raised for representations that Gate 5B intentionally does not decode."""
 
 
 @dataclass(frozen=True)
@@ -69,9 +68,14 @@ class DecodedFoamText:
 
 
 def strip_comments(text: str) -> str:
-    """Remove OpenFOAM C/C++ comments without evaluating any source content."""
+    """Remove C/C++ comments while retaining line positions."""
 
-    text = re.sub(r"/\*.*?\*/", lambda match: "\n" * match.group(0).count("\n"), text, flags=re.DOTALL)
+    text = re.sub(
+        r"/\*.*?\*/",
+        lambda match: "\n" * match.group(0).count("\n"),
+        text,
+        flags=re.DOTALL,
+    )
     return re.sub(r"//[^\n]*", "", text)
 
 
@@ -86,14 +90,16 @@ def parse_header(text: str) -> dict[str, str]:
 
 
 def decode_foam_text(payload: bytes, path: str, *, max_decompressed_bytes: int) -> DecodedFoamText:
-    """Decode a bounded ASCII OpenFOAM file and reject binary payloads explicitly."""
+    """Decode one bounded ASCII or gzip-compressed OpenFOAM file."""
 
+    if max_decompressed_bytes <= 0:
+        raise OpenFOAMNativeError("The decompression limit must be positive.")
     compressed = path.lower().endswith(".gz")
     if compressed:
         try:
             with gzip.GzipFile(fileobj=BytesIO(payload), mode="rb") as handle:
                 decoded = handle.read(max_decompressed_bytes + 1)
-        except OSError as exc:
+        except (OSError, EOFError) as exc:
             raise OpenFOAMNativeError(f"Invalid gzip payload: {exc}") from exc
         if len(decoded) > max_decompressed_bytes:
             raise OpenFOAMNativeError(
@@ -114,11 +120,16 @@ def decode_foam_text(payload: bytes, path: str, *, max_decompressed_bytes: int) 
         text = payload.decode("utf-8")
     except UnicodeDecodeError:
         text = payload.decode("latin-1")
-    return DecodedFoamText(text=text, compressed=compressed, format=representation, header=parse_header(text))
+    return DecodedFoamText(
+        text=text,
+        compressed=compressed,
+        format=representation,
+        header=parse_header(text),
+    )
 
 
 def unsafe_constructs(text: str) -> list[dict[str, Any]]:
-    """Return constructs that are preserved but never expanded or executed."""
+    """Identify constructs that must remain literal and unexecuted."""
 
     clean = strip_comments(text)
     patterns: tuple[tuple[str, str, re.Pattern[str]], ...] = (
@@ -144,24 +155,53 @@ def unsafe_constructs(text: str) -> list[dict[str, Any]]:
     return found
 
 
-def _extract_balanced(text: str, opening_index: int, opening: str, closing: str) -> tuple[str, int]:
+def _extract_balanced(
+    text: str,
+    opening_index: int,
+    opening: str,
+    closing: str,
+) -> tuple[str, int]:
+    """Extract a balanced block while ignoring delimiters inside quoted strings."""
+
     if opening_index < 0 or opening_index >= len(text) or text[opening_index] != opening:
         raise OpenFOAMNativeError(f"Expected {opening!r} at the requested block offset.")
     depth = 0
+    quote: str | None = None
+    escaped = False
     for index in range(opening_index, len(text)):
         character = text[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {'"', "'"}:
+            quote = character
+            continue
         if character == opening:
             depth += 1
         elif character == closing:
             depth -= 1
             if depth == 0:
                 return text[opening_index + 1 : index], index + 1
+            if depth < 0:
+                break
     raise OpenFOAMNativeError(f"Unterminated {opening}{closing} block.")
 
 
-def extract_named_block(text: str, name: str, *, opening: str = "{", closing: str = "}") -> str | None:
+def extract_named_block(
+    text: str,
+    name: str,
+    *,
+    opening: str = "{",
+    closing: str = "}",
+) -> str | None:
     clean = strip_comments(text)
-    match = re.search(rf"\b{re.escape(name)}\b\s*\{re.escape(opening)}", clean)
+    pattern = rf"\b{re.escape(name)}\b\s*{re.escape(opening)}"
+    match = re.search(pattern, clean)
     if not match:
         return None
     opening_index = clean.find(opening, match.start())
@@ -189,9 +229,14 @@ def parse_counted_list(text: str) -> tuple[int, str]:
 def parse_points(text: str) -> list[tuple[float, float, float]]:
     declared, inner = parse_counted_list(text)
     tuple_re = re.compile(rf"\(\s*({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s*\)")
-    points = [tuple(float(match.group(index)) for index in (1, 2, 3)) for match in tuple_re.finditer(inner)]
+    points = [
+        (float(match.group(1)), float(match.group(2)), float(match.group(3)))
+        for match in tuple_re.finditer(inner)
+    ]
     if len(points) != declared:
-        raise OpenFOAMNativeError(f"points declares {declared} entries but {len(points)} were decoded.")
+        raise OpenFOAMNativeError(
+            f"points declares {declared} entries but {len(points)} were decoded."
+        )
     return points
 
 
@@ -207,7 +252,9 @@ def parse_faces(text: str) -> list[list[int]]:
             )
         faces.append(vertices)
     if len(faces) != declared:
-        raise OpenFOAMNativeError(f"faces declares {declared} entries but {len(faces)} were decoded.")
+        raise OpenFOAMNativeError(
+            f"faces declares {declared} entries but {len(faces)} were decoded."
+        )
     return faces
 
 
@@ -233,8 +280,7 @@ def _top_level_named_brace_blocks(inner: str) -> list[tuple[str, str]]:
         brace = inner.find("{", match.end())
         if brace < 0:
             break
-        intervening = inner[match.end() : brace]
-        if intervening.strip():
+        if inner[match.end() : brace].strip():
             index = match.end()
             continue
         body, end = _extract_balanced(inner, brace, "{", "}")
@@ -244,7 +290,10 @@ def _top_level_named_brace_blocks(inner: str) -> list[tuple[str, str]]:
 
 
 def parse_simple_entries(body: str) -> dict[str, str]:
-    return {match.group(1): match.group(2).strip() for match in _SIMPLE_ENTRY_RE.finditer(body)}
+    return {
+        match.group(1): match.group(2).strip()
+        for match in _SIMPLE_ENTRY_RE.finditer(body)
+    }
 
 
 def parse_boundary(text: str) -> list[dict[str, Any]]:
@@ -256,7 +305,9 @@ def parse_boundary(text: str) -> list[dict[str, Any]]:
             n_faces = int(entries.get("nFaces", ""))
             start_face = int(entries.get("startFace", ""))
         except ValueError as exc:
-            raise OpenFOAMNativeError(f"Boundary patch {name!r} lacks integer nFaces/startFace values.") from exc
+            raise OpenFOAMNativeError(
+                f"Boundary patch {name!r} lacks integer nFaces/startFace values."
+            ) from exc
         patches.append(
             {
                 "name": name,
@@ -298,7 +349,8 @@ def build_mesh(
         for point_index in vertices:
             if point_index < 0 or point_index >= len(points):
                 raise OpenFOAMNativeError(
-                    f"face {face_index} references point {point_index}, outside 0..{max(len(points) - 1, 0)}."
+                    f"face {face_index} references point {point_index}, outside "
+                    f"0..{max(len(points) - 1, 0)}."
                 )
     labels = [*owner, *neighbour]
     if any(label < 0 for label in labels):
@@ -311,12 +363,13 @@ def build_mesh(
         count = int(patch["n_faces"])
         if start < 0 or count < 0 or start + count > len(faces):
             raise OpenFOAMNativeError(
-                f"Boundary patch {patch['name']!r} range [{start}, {start + count}) exceeds face count {len(faces)}."
+                f"Boundary patch {patch['name']!r} range [{start}, {start + count}) "
+                f"exceeds face count {len(faces)}."
             )
-        overlap = occupied.intersection(range(start, start + count))
-        if overlap:
+        if occupied.intersection(range(start, start + count)):
             warnings.append(f"boundary patch {patch['name']} overlaps another patch")
         occupied.update(range(start, start + count))
+
     if patches and min(int(patch["start_face"]) for patch in patches) != len(neighbour):
         warnings.append(
             "first boundary startFace does not equal neighbour count; topology may use a nonstandard ordering"
@@ -377,7 +430,11 @@ def _parse_numeric_literal(raw: str) -> list[float | int]:
     values: list[float | int] = []
     for item in _NUMBER_RE.findall(token):
         value = float(item)
-        values.append(int(value) if value.is_integer() and not any(char in item.lower() for char in (".", "e")) else value)
+        values.append(
+            int(value)
+            if value.is_integer() and not any(character in item.lower() for character in (".", "e"))
+            else value
+        )
     return values
 
 
@@ -391,13 +448,13 @@ def _parse_nonuniform_values(inner: str, count: int, components: int | None) -> 
                 f"nonuniform scalar list declares {count} values but {len(values)} were decoded."
             )
         return values
-    tuple_re = re.compile(r"\(([^()]*)\)")
-    flattened: list[float | int] = []
-    tuples = list(tuple_re.finditer(inner))
+
+    tuples = list(re.finditer(r"\(([^()]*)\)", inner))
     if len(tuples) != count:
         raise OpenFOAMNativeError(
             f"nonuniform field list declares {count} tuples but {len(tuples)} were decoded."
         )
+    flattened: list[float | int] = []
     for tuple_match in tuples:
         values = _parse_numeric_literal(tuple_match.group(1))
         if len(values) != components:
@@ -436,13 +493,14 @@ def parse_field(text: str, *, fallback_name: str) -> FieldData:
         internal_count = 1
     else:
         nonuniform = re.search(
-            r"\binternalField\s+nonuniform\s+(?:List\s*<\s*([^>]+)\s*>|([A-Za-z0-9_]+))\s+(\d+)\s*\(",
+            r"\binternalField\s+nonuniform\s+"
+            r"(?:List\s*<\s*([^>]+)\s*>|([A-Za-z0-9_]+))\s+(\d+)\s*\(",
             clean,
             flags=re.DOTALL,
         )
         if nonuniform:
             internal_count = int(nonuniform.group(3))
-            opening_index = clean.find("(", nonuniform.start(3))
+            opening_index = clean.find("(", nonuniform.start())
             inner, _ = _extract_balanced(clean, opening_index, "(", ")")
             internal_values = _parse_nonuniform_values(inner, internal_count, components)
             internal_mode = "nonuniform"
@@ -465,11 +523,19 @@ def parse_field(text: str, *, fallback_name: str) -> FieldData:
                     "type": entries.get("type"),
                     "value": value,
                     "value_mode": (
-                        "uniform" if value and value.lstrip().startswith("uniform")
-                        else "nonuniform" if value and value.lstrip().startswith("nonuniform")
-                        else "other" if value else "none"
+                        "uniform"
+                        if value and value.lstrip().startswith("uniform")
+                        else "nonuniform"
+                        if value and value.lstrip().startswith("nonuniform")
+                        else "other"
+                        if value
+                        else "none"
                     ),
-                    "metadata": {key: item for key, item in entries.items() if key not in {"type", "value"}},
+                    "metadata": {
+                        key: item
+                        for key, item in entries.items()
+                        if key not in {"type", "value"}
+                    },
                 }
             )
 
@@ -492,8 +558,8 @@ def parse_field(text: str, *, fallback_name: str) -> FieldData:
 def parse_dimensioned_properties(text: str) -> list[dict[str, str]]:
     clean = strip_comments(text)
     pattern = re.compile(
-        r"(?m)^\s*(?:(dimensioned[A-Za-z0-9_]+)\s+)?([A-Za-z_][A-Za-z0-9_.:-]*)\s+"
-        r"(\[[^\]]+\])\s+([^;{}]+);"
+        r"(?m)^\s*(?:(dimensioned[A-Za-z0-9_]+)\s+)?"
+        r"([A-Za-z_][A-Za-z0-9_.:-]*)\s+(\[[^\]]+\])\s+([^;{}]+);"
     )
     return [
         {
