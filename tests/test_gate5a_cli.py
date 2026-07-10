@@ -5,7 +5,9 @@ from typer.testing import CliRunner
 
 from caereflex.arrays import ArrayService
 from caereflex.cli.main import app
+from caereflex.contracts import CONTRACT_VERSION
 from caereflex.services import doctor_report
+from caereflex.version import __version__
 
 runner = CliRunner()
 
@@ -13,11 +15,11 @@ runner = CliRunner()
 def test_version_and_doctor_report_alpha_runtime():
     version = runner.invoke(app, ["version"])
     assert version.exit_code == 0
-    assert version.output.strip() == "2.0.0a1"
+    assert version.output.strip() == __version__
 
     report = doctor_report()
-    assert report["caereflex_version"] == "2.0.0a1"
-    assert report["contract_version"] == "2.0-alpha.3"
+    assert report["caereflex_version"] == __version__
+    assert report["contract_version"] == CONTRACT_VERSION
     assert report["execution_runtime"]["mode"] == "local-subprocess"
     assert any(item["backend_id"] == "core.manifest-audit" for item in report["execution_runtime"]["backends"])
 
