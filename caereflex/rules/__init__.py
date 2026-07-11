@@ -1,0 +1,63 @@
+"""Deterministic physics-consistency rules and built-in rule packs."""
+from caereflex.rules.contracts import (
+    RULE_PROTOCOL_VERSION,
+    PhysicsRule,
+    PhysicsRuleDefinition,
+    PhysicsRuleEvaluation,
+    PhysicsRulePack,
+    PhysicsRulePackManifest,
+    PhysicsRuleRunReport,
+    RuleApplicability,
+    RuleBlockedError,
+    RuleEvaluationError,
+    RuleEvaluationStatus,
+    RuleEvidenceRef,
+    RuleEvidenceRequirement,
+    RulePackNotFoundError,
+    RuleRunStatus,
+    RuleSeverity,
+)
+from caereflex.rules.engine import (
+    RegisteredRulePack,
+    evaluate_rule_pack,
+    get_rule_pack,
+    list_rule_packs,
+    register_rule_pack,
+)
+from caereflex.rules.openfoam_cfd import (
+    OPENFOAM_CFD_PACK_ID,
+    OPENFOAM_CFD_PACK_MANIFEST,
+    OPENFOAM_CFD_PACK_VERSION,
+    OPENFOAM_CFD_RULE_PACK,
+)
+from caereflex.rules.service import evaluate_case_rules, physics_consistency_runs
+
+__all__ = [
+    "RULE_PROTOCOL_VERSION",
+    "OPENFOAM_CFD_PACK_ID",
+    "OPENFOAM_CFD_PACK_MANIFEST",
+    "OPENFOAM_CFD_PACK_VERSION",
+    "OPENFOAM_CFD_RULE_PACK",
+    "PhysicsRule",
+    "PhysicsRuleDefinition",
+    "PhysicsRuleEvaluation",
+    "PhysicsRulePack",
+    "PhysicsRulePackManifest",
+    "PhysicsRuleRunReport",
+    "RegisteredRulePack",
+    "RuleApplicability",
+    "RuleBlockedError",
+    "RuleEvaluationError",
+    "RuleEvaluationStatus",
+    "RuleEvidenceRef",
+    "RuleEvidenceRequirement",
+    "RulePackNotFoundError",
+    "RuleRunStatus",
+    "RuleSeverity",
+    "evaluate_case_rules",
+    "evaluate_rule_pack",
+    "get_rule_pack",
+    "list_rule_packs",
+    "physics_consistency_runs",
+    "register_rule_pack",
+]
