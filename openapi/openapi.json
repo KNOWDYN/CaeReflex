@@ -11,6 +11,15 @@
     "/openapi.yaml": {"get": {"summary": "OpenAPI YAML", "responses": {"200": {"description": "Successful Response"}}}},
     "/cases/import": {"post": {"summary": "Import case", "responses": {"200": {"description": "Successful Response"}}}},
     "/cases": {"get": {"summary": "List cases", "responses": {"200": {"description": "Successful Response"}}}},
-    "/cases/{case_id}": {"get": {"summary": "Get case", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}}
+    "/cases/{case_id}": {"get": {"summary": "Get case", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/summary": {"get": {"summary": "Get summary", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/agent-context": {"get": {"summary": "Get agent context", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/literature": {"get": {"summary": "Get literature", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/inspection-flags": {"get": {"summary": "Get inspection flags", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/crossref/search": {"post": {"summary": "Search CrossRef", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/crossref/attach": {"post": {"summary": "Attach CrossRef evidence", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/export/json": {"post": {"summary": "Export JSON", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/export/markdown": {"post": {"summary": "Export Markdown", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}},
+    "/cases/{case_id}/export/bibtex": {"post": {"summary": "Export BibTeX", "parameters": [{"name": "case_id", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Successful Response"}}}}
   }
 }
