@@ -30,6 +30,12 @@ from caereflex.exporters import (
     export_markdown_report, export_bibtex, load_reflexcase
 )
 from caereflex.plugins import adapter_capabilities, get_adapter_plugin, probe_manifest
+from caereflex.spatial import (
+    SPATIAL_MAPPING_VERSION,
+    SUPPORTED_MAPPING_BACKENDS,
+    SpatialMappingError,
+    persist_spatial_mapping,
+)
 from caereflex.version import __version__
 
 EXAMPLE_NAMES = ["gmsh_minimal", "openfoam_cavity_minimal", "vtk_minimal", "crossref_context", "agent_workflow"]
@@ -77,6 +83,62 @@ def _native_backend(adapter: str) -> tuple[str, str | None]:
         "vtk": ("vtk.native", "native_vtk"),
     }
     return mapping.get(normalized, ("core.manifest-audit", None))
+
+
+def _attach_native_spatial_mapping(
+    case: ReflexCase,
+    manifest: CaseManifest,
+    result: Any,
+    config: CaeReflexConfig,
+) -> None:
+    if result.backend_id not in SUPPORTED_MAPPING_BACKENDS:
+        return
+    try:
+        mapping = persist_spatial_mapping(
+            case=case,
+            result=result,
+            state_root=config.execution_state_dir,
+            source_manifest_id=manifest.manifest_id,
+        )
+    except (SpatialMappingError, RuntimeError, ValueError) as exc:
+        diagnostic = DiagnosticEvent(
+            code="CRX-SPATIAL-MAP-001",
+            severity=DiagnosticSeverity.warning,
+            message=f"Native evidence could not be persisted as a spatial graph: {exc}",
+            parser="caereflex.spatial.mapping",
+            details={
+                "backend_id": result.backend_id,
+                "execution_id": result.execution_id,
+                "mapping_version": SPATIAL_MAPPING_VERSION,
+            },
+            information_lost=["canonical_spatial_graph"],
+        )
+        case.diagnostics.append(diagnostic.model_dump(mode="json"))
+        case.inspection_flags.append(
+            InspectionFlag(
+                severity=Severity.warning,
+                category="spatial_mapping_degraded",
+                message=diagnostic.message,
+            )
+        )
+        return
+    report = mapping.compact_report()
+    case.provenance.append(
+        ProvenanceRecord(
+            event="native_spatial_mapping_completed",
+            details={
+                "execution_id": result.execution_id,
+                "backend_id": result.backend_id,
+                "graph_id": mapping.graph_id,
+                "mapping_version": mapping.mapping_version,
+                "frame_count": report["frame_count"],
+                "entity_count": report["entity_count"],
+                "relation_count": report["relation_count"],
+                "array_link_count": report["array_link_count"],
+                "cross_format_equivalence_asserted": False,
+            },
+        )
+    )
 
 
 def _run_deep_execution(
@@ -151,6 +213,7 @@ def _run_deep_execution(
             },
         )
     )
+    _attach_native_spatial_mapping(case, manifest, result, config)
     if str(result.status) != ExecutionStatus.success.value:
         case.inspection_flags.append(
             InspectionFlag(
@@ -272,6 +335,11 @@ def doctor_report() -> dict[str, Any]:
             "default_child_processes": "blocked-by-python-guard",
             "source_mutation": "detected-by-before-and-after-snapshot",
             "backends": list_execution_backends(),
+        },
+        "spatial_mapping": {
+            "version": SPATIAL_MAPPING_VERSION,
+            "backends": sorted(SUPPORTED_MAPPING_BACKENDS),
+            "cross_format_equivalence": "not asserted",
         },
         "adapters": [item.model_dump(mode="json") for item in adapter_capabilities()],
     }
