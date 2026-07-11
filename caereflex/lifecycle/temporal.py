@@ -4,7 +4,13 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from caereflex.lifecycle.contracts import ChangeKind, TemporalChange, TemporalComparison
+from caereflex.lifecycle.contracts import (
+    TEMPORAL_COMPARISON_PROTOCOL_VERSION,
+    ChangeKind,
+    TemporalChange,
+    TemporalComparison,
+    canonical_digest,
+)
 from caereflex.lifecycle.store import LifecycleStore, LifecycleStoreError
 
 DEFAULT_IGNORED_PATHS = [
@@ -109,6 +115,21 @@ def compare_revisions(
                 )
             )
     total = sum(counts.values())
+    truncated = total > len(changes)
+    comparison_digest = canonical_digest(
+        {
+            "protocol_version": TEMPORAL_COMPARISON_PROTOCOL_VERSION,
+            "project_id": project_id,
+            "baseline_revision_id": baseline_revision_id,
+            "candidate_revision_id": candidate_revision_id,
+            "baseline_digest": baseline_record.case_digest,
+            "candidate_digest": candidate_record.case_digest,
+            "ignored_paths": ignored,
+            "counts": counts,
+            "changes": [item.model_dump(mode="json") for item in changes],
+            "truncated": truncated,
+        }
+    )
     comparison = TemporalComparison(
         comparison_id=f"comparison_{uuid.uuid4().hex[:16]}",
         project_id=project_id,
@@ -119,6 +140,7 @@ def compare_revisions(
         ignored_paths=ignored,
         counts=counts,
         changes=changes,
-        truncated=total > len(changes),
-    ).with_digest()
+        truncated=truncated,
+        comparison_digest=comparison_digest,
+    )
     return store.save_comparison(comparison) if persist else comparison
