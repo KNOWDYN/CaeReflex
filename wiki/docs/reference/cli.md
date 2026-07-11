@@ -33,8 +33,12 @@ Current CLI command surface:
 | `spatial arrays` | List ArrayRef links by owner and spatial role. |
 | `spatial validate` | Run the frozen Gate 6 compatibility checks. |
 | `spatial version` | Print the spatial-query and Gate 6 freeze versions. |
+| `rules packs` | List registered deterministic physics rule packs. |
+| `rules describe` | Show one pack manifest and its versioned rule definitions. |
+| `rules evaluate` | Evaluate a stored ReflexCase and optionally attach the report. |
+| `rules version` | Print the physics-rule protocol version. |
 | `adapters list` | List installed adapter capabilities. |
-| `adapters info` | Show declared capabilities, dependencies, fallbacks, and licence metadata for one adapter. |
+| `adapters info` | Show the declared capabilities, dependencies, fallbacks, and licence metadata for one adapter. |
 | `adapters probe` | Build a manifest and report which installed adapters match it. |
 | `schema show` | Print the generated ReflexCase JSON Schema. |
 | `schema validate` | Validate a stored ReflexCase and report its schema and contract versions. |
@@ -98,6 +102,20 @@ caereflex spatial validate GRAPH_ID --state-root .caereflex --json
 
 Spatial responses are deterministic and bounded. Bounds are compared only in the exact requested frame; no transform or unit conversion is inferred. Neighbour traversal follows stored relations only. Array-link queries do not return numerical values.
 
+## Physics-consistency rules
+
+```bash
+caereflex rules packs --json
+caereflex rules describe openfoam.cfd-core --json
+caereflex rules evaluate openfoam.caereflex.json \
+  --pack openfoam.cfd-core \
+  --state-root .caereflex \
+  --out openfoam.rules.json \
+  --json
+```
+
+Rule reports are deterministic and retain exact evidence paths. `consistent` means only that the evidence checked by that exact rule version agrees. `unknown`, `not_evaluated` and `blocked` are not success states. Gate 7 does not assess convergence, mesh adequacy, turbulence-model suitability, experimental validation, certification or design safety.
+
 ## Jobs and arrays
 
 ```bash
@@ -115,4 +133,4 @@ Commands exposing `--json` emit JSON on standard output. Human-readable status t
 
 ## Compatibility and limits of claims
 
-The legacy format-specific aliases remain available. Schema-v1 ReflexCase payloads remain valid because all Gate 6 references are additive. Successful inspection, query or Gate 6 acceptance does not establish simulation validity, geometry validity, convergence, mesh adequacy, cross-format equivalence, certification or design safety.
+The legacy format-specific aliases remain available. Schema-v1 ReflexCase payloads remain valid because Gate 6 and Gate 7 records are additive. Successful inspection, spatial acceptance or rule consistency does not establish simulation validity, geometry validity, convergence, mesh adequacy, cross-format equivalence, certification or design safety.
