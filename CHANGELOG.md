@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0b2 — Gate 6B backend-to-graph mapping
+
+- Added deterministic `caereflex.spatial-mapping/1.0` translation from validated `openfoam.native`, `gmsh.native` and `vtk.native` execution results into Gate 6A spatial graphs.
+- Added OpenFOAM dataset, aggregate node/face/cell and explicit patch entities with lazy coordinate, topology, ownership and field links.
+- Added Gmsh geometry, mesh, entity and physical-group mappings while keeping geometry and mesh identities distinct.
+- Added VTK dataset, point, cell-type, field and collection-reference inventory mappings.
+- Preserved unresolved coordinate frames for OpenFOAM and Gmsh; accepted VTK origin/direction frames only when explicit and linearly independent.
+- Added deterministic graph, frame, entity, relation and array-link identifiers.
+- Added automatic graph persistence and compact ReflexCase references after deep or forensic native inspection.
+- Added stable mapping diagnostics for graph failures and unresolved array ownership.
+- Added no cross-format equivalence, coordinate composition, adjacency inference, spatial query service, physics validation or design certification.
+
 ## 2.0.0b1 — Gate 6A spatial contracts and coordinate frames
 
 - Added canonical backend-neutral spatial entity families for geometry, mesh, grouping and dataset evidence.
