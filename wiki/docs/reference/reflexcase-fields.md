@@ -38,6 +38,8 @@ ReflexCase schema version remains `1.0`. The root fields include:
 
 Gate 5A stores compact execution results under `metadata.inspection_execution`. The result includes job and execution IDs, backend identity, status, parser attempts, diagnostics, relative paths accessed, bytes read, artefact metadata and lazy array references.
 
+Gate 6A stores compact spatial graph references under `metadata.spatial_graph_refs`. Each reference contains a graph ID, SQLite store URI, graph and contract versions, default-frame ID, compact counts and update time. Complete entities, relations, frames and arrays remain outside ReflexCase.
+
 ## ArrayRef
 
 Required compatibility fields:
@@ -68,3 +70,20 @@ Optional fields include:
 - `metadata`
 
 An `ArrayRef` is a handle, not embedded array content. Agent-facing contexts must use bounded queries rather than serialising complete industrial arrays.
+
+## SpatialGraphRef
+
+A compact spatial graph reference contains:
+
+- `graph_id`
+- `store_uri`
+- `graph_version`
+- `contract_version`
+- `default_coordinate_frame_id`
+- `frame_count`
+- `entity_count`
+- `relation_count`
+- `array_link_count`
+- `updated_at`
+
+The reference does not contain coordinates, connectivity, full graph payloads or inferred coordinate assumptions.
