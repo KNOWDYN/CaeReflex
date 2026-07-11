@@ -6,7 +6,7 @@
 
 <p align="center">
   
-  <img alt="Release 2.0.0b5" src="https://img.shields.io/badge/release-2.0.0b5-6f42c1?style=flat-square">
+  <img alt="Release 2.0.0b6" src="https://img.shields.io/badge/release-2.0.0b6-6f42c1?style=flat-square">
   <img alt="Source-available licence" src="https://img.shields.io/badge/licence-source--available-8b5cf6?style=flat-square">
   <img alt="Python 3.10 through 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
   <img alt="CLI, Python and REST OpenAPI interfaces" src="https://img.shields.io/badge/interfaces-CLI%20%7C%20Python%20%7C%20REST%2FOpenAPI-0f766e?style=flat-square">
@@ -350,7 +350,7 @@ CaeReflex keeps compact evidence in JSON and heavy numerical payloads behind ver
 
 | Contract | Version |
 | --- | --- |
-| Package | `2.0.0b5` |
+| Package | `2.0.0b6` |
 | ReflexCase schema | `1.0` |
 | Backend-neutral inspection contract | `2.0-alpha.3` |
 | Gate 5 backend-result envelope | `caereflex.gate5.backend-result/1.0` |

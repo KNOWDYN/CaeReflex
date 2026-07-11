@@ -3,7 +3,7 @@
   "info": {
     "title": "CaeReflex API",
     "description": "Bounded read-only CAE inspection and lifecycle services for agent workflows.",
-    "version": "2.0.0b5"
+    "version": "2.0.0b6"
   },
   "paths": {
     "/health": {

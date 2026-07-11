@@ -1,5 +1,5 @@
 site_name: CaeReflex Wiki
-site_description: Agent-readable engineering evidence for simulation artefacts
+site_description: Deterministic engineering-evidence infrastructure for Physics-AI
 repo_url: https://github.com/KNOWDYN/CaeReflex
 docs_dir: docs
 site_dir: site
@@ -69,6 +69,7 @@ nav:
       - Security: reference/security.md
   - Releases:
       - Overview: releases/index.md
+      - 2.0.0b6: releases/2.0.0b6.md
       - 2.0.0b5: releases/2.0.0b5.md
       - 2.0.0b4: releases/2.0.0b4.md
       - 2.0.0b3: releases/2.0.0b3.md

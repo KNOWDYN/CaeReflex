@@ -8,15 +8,14 @@ CaeReflex is source-available software owned and licensed by **KNOWDYN LTD (UK)*
 
 | Version | Security support | Status |
 | --- | ---: | --- |
-| `2.0.0a5` | Supported | Active 2.x alpha line |
-| `2.0.0a4` | Critical fixes only | Superseded alpha |
-| `2.0.0a3` | Critical fixes only | Superseded alpha |
-| `2.0.0a2` | Critical fixes only | Superseded alpha |
-| `2.0.0a1` | Critical fixes only | Superseded alpha |
-| `1.0.0` | Critical fixes only | Maintenance during the alpha transition |
+| `2.0.0b6` | Supported | Active 2.x beta line |
+| `2.0.0b5` | Critical fixes only | Superseded beta |
+| `2.0.0b4` | Critical fixes only | Superseded beta |
+| `2.0.0b3` and earlier pre-releases | Not supported | Upgrade required |
+| `1.0.0` | Critical fixes only | Maintenance during the 2.0 beta transition |
 | Earlier versions | Not supported | Upgrade required |
 
-The `2.0.0a5` package uses ReflexCase schema `1.0`, backend-neutral contract `2.0-alpha.3` and frozen Gate 5 backend envelope `caereflex.gate5.backend-result/1.0`. Reports should identify all applicable versions.
+The `2.0.0b6` package uses ReflexCase schema `1.0`, backend-neutral contract `2.0-alpha.3`, frozen Gate 5 backend envelope `caereflex.gate5.backend-result/1.0`, spatial-query protocol `caereflex.spatial-query/1.0`, physics-rule protocol `caereflex.physics-rule/1.0` and lifecycle protocol `caereflex.lifecycle/1.0`. Reports should identify all applicable versions.
 
 ## Reporting security issues
 
