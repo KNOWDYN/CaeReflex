@@ -1,75 +1,166 @@
-# CaeReflex
+<h1 align="center">CaeReflex</h1>
 
-> **Physics-AI systems cannot reason reliably over simulation work they cannot inspect. CaeReflex gives them a deterministic engineering-evidence layer.**
+<h3 align="center">The engineering-evidence control plane for Physics-AI</h3>
 
-CaeReflex converts solver cases, meshes, field data, spatial relationships, physics checks, literature metadata, revision history, and human review into structured evidence that software agents can query and cite. It is local-first, read-only by design, and built to connect computer-aided engineering workflows with AI systems **without running solvers, mutating source cases, or pushing large numerical arrays into model context windows**.
+<p align="center"><strong>Turn simulation artefacts into deterministic, provenance-preserving evidence that AI systems can inspect, query, compare, and cite.</strong></p>
 
-`2.0.0b5` · Python `3.10–3.12` · CLI + Python + REST/OpenAPI · Source-available
+<p align="center">
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml"><img alt="Core CI" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml"><img alt="Native Readers" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml"><img alt="Spatial Contracts" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml"><img alt="Physics Rules" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml"><img alt="Lifecycle Services" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml/badge.svg?branch=main"></a>
+</p>
 
-| Investor view | Executive view | Engineer view |
+<p align="center">
+  <img alt="Release 2.0.0b5" src="https://img.shields.io/badge/release-2.0.0b5-6f42c1?style=flat-square">
+  <img alt="Python 3.10 through 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
+  <img alt="CLI, Python and REST OpenAPI interfaces" src="https://img.shields.io/badge/interfaces-CLI%20%7C%20Python%20%7C%20REST%2FOpenAPI-0f766e?style=flat-square">
+  <img alt="Local-first deployment" src="https://img.shields.io/badge/deployment-local--first-1f6feb?style=flat-square">
+  <img alt="Read-only source policy" src="https://img.shields.io/badge/source%20policy-read--only-2ea44f?style=flat-square">
+  <img alt="Source-available licence" src="https://img.shields.io/badge/licence-source--available-8b5cf6?style=flat-square">
+</p>
+
+<p align="center">
+  <a href="#ten-minute-start"><strong>Quickstart</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#system-architecture"><strong>Architecture</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#the-platform-stack"><strong>Platform stack</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#cli-reference"><strong>CLI</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#restopenapi-service"><strong>REST/OpenAPI</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#security-model"><strong>Security</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#licence"><strong>Commercial licensing</strong></a>
+</p>
+
+---
+
+> **Raw simulation files are not AI context.** CaeReflex converts CAE work into governed, machine-readable evidence—without running solvers, mutating source cases, or forcing heavy numerical arrays into model context windows.
+
+CaeReflex connects computer-aided engineering workflows to physics-aware AI systems. It inspects solver cases, meshes, fields, spatial relationships, dimensional evidence, literature metadata, revision history, and human review; then exposes the result through versioned contracts, Python, CLI, and a bounded REST/OpenAPI service.
+
+## At a glance
+
+| **INSPECT** | **STRUCTURE** | **REASON** | **GOVERN** |
+| :--- | :--- | :--- | :--- |
+| Native, read-only evidence extraction from supported CAE formats | ReflexCase, lazy arrays, spatial graphs, provenance, and diagnostics | Deterministic dimensional and physics-consistency checks | Immutable revisions, temporal comparisons, run histories, and append-only review |
+
+| Leadership view | Platform view | Engineering view |
 | --- | --- | --- |
-| A reusable infrastructure layer between simulation software and physics-aware AI, extensible across solver and data ecosystems. | A bounded, provenance-preserving service for integrating engineering evidence into internal AI and automation programmes. | Native inspection, lazy arrays, spatial graphs, deterministic rules, immutable revisions, temporal comparisons, and review records from one toolchain. |
+| A horizontal infrastructure layer between simulation software and physics-aware AI. | A bounded evidence service that can sit inside model, agent, digital-engineering, and R&D platforms. | Native readers, typed contracts, lazy heavy-data access, spatial queries, rule packs, and governed lifecycle from one toolchain. |
 
-## Why CaeReflex exists
+## Why this infrastructure matters
 
-Simulation intelligence is usually trapped inside folders, proprietary workflows, binary-heavy datasets, solver conventions, and expert memory. A general-purpose AI system may receive a screenshot, a copied log, or a verbal summary, but not the structured evidence needed to distinguish:
+Simulation intelligence is usually trapped inside folders, solver conventions, binary-heavy datasets, scripts, and expert memory. An AI system may receive a screenshot, copied log, or verbal summary, but not the structured evidence required to distinguish:
 
 - what was actually present in the engineering files;
-- what was decoded exactly, inferred, supplied by a user, or unavailable;
-- which coordinate frame, field association, unit, time step, or source path applies;
-- what changed between two revisions;
+- what was decoded exactly, inferred, user-supplied, conflicted, or unavailable;
+- which coordinate frame, field association, unit, time step, and source path applies;
+- what changed between two engineering revisions;
 - which checks passed, failed, were blocked, or could not be evaluated;
-- what a human reviewer accepted, rejected, or superseded; and
-- which claims remain outside the evidence.
+- what a human reviewer accepted, rejected, conditioned, or superseded; and
+- which conclusions remain outside the recorded evidence.
 
-CaeReflex inserts a controlled evidence layer between CAE artefacts and downstream AI systems.
+> **CaeReflex is not another model. It is the evidence substrate models need before they can operate responsibly on CAE.**
 
-```text
-Engineering workspace
-    │
-    ├── Gmsh geometry / mesh
-    ├── OpenFOAM case / fields
-    ├── VTK datasets / collections
-    └── optional literature query
-            │
-            ▼
-Discovery manifest + bounded inspection plan
-            │
-            ▼
-Isolated native readers + deterministic fallbacks
-            │
-            ├── ReflexCase
-            ├── diagnostics and provenance
-            ├── content-addressed ArrayRef handles
-            └── immutable execution records
-            │
-            ▼
-Spatial graph + physics-rule reports
-            │
-            ▼
-Projects → revisions → runs → comparisons → human reviews
-            │
-            ▼
-CLI / Python / bounded REST/OpenAPI / tool-calling AI systems
+### Designed for organisations building
+
+| Physics-aware AI | Simulation intelligence | Digital engineering | Governed R&D automation |
+| --- | --- | --- | --- |
+| Foundation models, engineering copilots, tool-using agents, and scientific reasoning systems | Search, review, comparison, and knowledge layers over simulation estates | Digital twins, design-space exploration, optimisation workflows, and model-based engineering | Internal platforms that require provenance, bounded execution, immutable evidence, and human control |
+
+## System architecture
+
+```mermaid
+flowchart LR
+    subgraph Sources["Engineering sources"]
+        OF["OpenFOAM cases"]
+        GM["Gmsh geometry and meshes"]
+        VT["VTK datasets and collections"]
+        LR["Optional literature query"]
+    end
+
+    subgraph Acquisition["Evidence acquisition"]
+        DM["Discovery manifest"]
+        IP["Bounded inspection plan"]
+        NR["Isolated native readers"]
+        DF["Deterministic fallbacks"]
+    end
+
+    subgraph Core["Evidence core"]
+        RC["ReflexCase"]
+        PR["Provenance and diagnostics"]
+        AR["ArrayRef and content-addressed artefacts"]
+    end
+
+    subgraph Intelligence["Physics-aware structure"]
+        SG["Spatial graph"]
+        SQ["Bounded spatial queries"]
+        RU["Deterministic physics-rule reports"]
+    end
+
+    subgraph Governance["Governed lifecycle"]
+        PJ["Projects"]
+        RV["Immutable revisions"]
+        CP["Temporal comparisons"]
+        HR["Append-only human review"]
+    end
+
+    subgraph Interfaces["Integration surfaces"]
+        CLI["CLI"]
+        PY["Python"]
+        API["Bounded REST/OpenAPI"]
+    end
+
+    Sources --> DM --> IP
+    IP --> NR
+    IP --> DF
+    NR --> RC
+    DF --> RC
+    RC --> PR
+    RC --> AR
+    RC --> SG --> SQ
+    RC --> RU
+    RC --> PJ --> RV --> CP --> HR
+    Core --> Interfaces
+    Intelligence --> Interfaces
+    Governance --> Interfaces
 ```
 
-## What CaeReflex provides
+## The platform stack
 
 | Layer | Capability | Primary output |
 | --- | --- | --- |
-| Discovery | Bounded workspace cataloguing, format detection, adapter probing, incremental manifest diffs | `CaseManifest` |
-| Inspection | Read-only Gmsh, OpenFOAM, and VTK inspection with explicit fallback records | `ReflexCase` |
-| Native evidence | Isolated native backends for supported mesh, topology, field, and time metadata | `InspectionExecutionResult` |
-| Heavy data | Content-addressed artefacts and lazy, bounded numerical access | `ArrayRef` |
+| Discovery | Bounded workspace cataloguing, format detection, adapter probing, and incremental manifest diffs | `CaseManifest` |
+| Inspection | Read-only Gmsh, OpenFOAM, and VTK inspection with explicit parser attempts and fallbacks | `ReflexCase` |
+| Native evidence | Isolated backends for supported geometry, mesh, topology, field, and time metadata | `InspectionExecutionResult` |
+| Heavy data | Content-addressed artefacts and lazy bounded numerical access | `ArrayRef` |
 | Units | Seven-component dimensional evidence, parsing, conversion, and compatibility checks | quantity evidence and dimensional checks |
 | Spatial evidence | Backend-neutral entities, coordinate frames, relations, bounds, and array links | persisted spatial graph |
 | Spatial queries | Bounded entity, relation, neighbourhood, bounds, frame, and array-link queries | deterministic query result |
-| Physics checks | Versioned deterministic rules with evidence pointers, remediation, and six-valued outcomes | rule evaluation report |
+| Physics checks | Versioned deterministic rules with evidence pointers, limitations, remediation, and six-valued outcomes | `RuleEvaluationReport` |
 | Literature | Explicitly requested DOI metadata and available abstracts | literature evidence and BibTeX |
 | Lifecycle | Projects, immutable revisions, restricted runs, and append-only events | lifecycle records |
-| Temporal review | Deterministic revision comparison using exact JSON-pointer paths | comparison report |
-| Human control | Append-only review statements with supersession and digest chaining | immutable review record |
-| Services | Synchronous case endpoints and bounded local asynchronous jobs | REST/OpenAPI responses |
+| Temporal review | Deterministic revision comparison using exact JSON-pointer paths | `TemporalComparison` |
+| Human control | Append-only decisions with supersession and digest chaining | `HumanReviewRecord` |
+| Services | Synchronous evidence endpoints and bounded local asynchronous jobs | REST/OpenAPI responses |
+
+## Infrastructure characteristics
+
+| Characteristic | Why it matters |
+| --- | --- |
+| **Deterministic** | Stable ordering, versioned contracts, explicit states, canonical digests, and fail-closed behaviour make outputs testable and comparable. |
+| **Evidence-preserving** | Every material claim can retain provenance, source paths, evidence state, diagnostics, and missing-evidence records. |
+| **Heavy-data aware** | Large coordinates, connectivity, and field arrays remain outside prompt payloads behind verified, bounded handles. |
+| **Backend-neutral** | Native formats map into common evidence and spatial contracts without asserting false cross-format equivalence. |
+| **Governed** | Immutable snapshots, restricted state transitions, temporal diffs, and append-only review preserve operational history. |
+| **Bounded** | Filesystem scope, scanning, worker time, output size, arrays, queries, request bodies, queues, and lists have explicit limits. |
+| **Extensible** | Adapter entry points, rule packs, service contracts, and independent protocol versions provide controlled expansion surfaces. |
+| **Local-first** | Ordinary inspection stays local; external literature calls are explicit and raw simulation files are not transmitted. |
 
 ## What CaeReflex is — and is not
 
@@ -77,7 +168,7 @@ CaeReflex is an **inspection, evidence, provenance, and workflow-control system*
 
 It is not a solver, mesher, CAD repair tool, visualisation engine, optimisation engine, simulation validator, certification system, convergence proof, mesh-adequacy assessor, or autonomous engineering decision-maker.
 
-> **Safety boundary:** a consistent rule result means that the recorded evidence satisfied that rule. It does not establish numerical accuracy, physical validity, convergence, mesh independence, experimental validation, regulatory compliance, certification, or design safety.
+> **Safety boundary:** a `consistent` rule result means that the recorded evidence satisfied that rule. It does not establish numerical accuracy, physical validity, convergence, mesh independence, experimental validation, regulatory compliance, certification, or design safety.
 
 ## Ten-minute start
 
@@ -124,7 +215,7 @@ caereflex inspect examples/openfoam_cavity_minimal \
   --report case_report.md
 ```
 
-The command produces a full `ReflexCase`, a discovery manifest, compact AI-ready context, and a human-readable report. With `deep` or `forensic`, supported cases also pass through the isolated native execution backend and may create spatial evidence and lazy array references.
+This produces a full `ReflexCase`, discovery manifest, compact AI-ready context, and human-readable report. With `deep` or `forensic`, supported cases also pass through an isolated native backend and may create spatial evidence and lazy array references.
 
 ### 4. Evaluate deterministic physics rules
 
@@ -260,7 +351,8 @@ CaeReflex keeps compact evidence in JSON and heavy numerical payloads behind ver
 | `TemporalComparison` | Deterministic structural changes between verified revisions |
 | `HumanReviewRecord` | Append-only decision and statement linked to recorded evidence |
 
-### Current protocol versions
+<details>
+<summary><strong>Current protocol versions</strong></summary>
 
 | Contract | Version |
 | --- | --- |
@@ -278,6 +370,8 @@ CaeReflex keeps compact evidence in JSON and heavy numerical payloads behind ver
 | Temporal comparison | `caereflex.temporal-comparison/1.0` |
 | Human review | `caereflex.human-review/1.0` |
 | Asynchronous jobs | `caereflex.async-job/1.0` |
+
+</details>
 
 ## Heavy arrays without prompt inflation
 
@@ -321,16 +415,7 @@ Spatial queries are read-only and bounded. They use recorded relations and same-
 
 ## Deterministic physics-consistency rules
 
-The physics-rule protocol requires every rule to declare:
-
-- identity and version;
-- applicability;
-- required evidence;
-- assumptions and limitations;
-- default severity;
-- evidence pointers;
-- remediation; and
-- deterministic result semantics.
+Every rule declares identity, version, applicability, required evidence, assumptions, limitations, severity, evidence pointers, remediation, and deterministic result semantics.
 
 The six possible outcomes are:
 
@@ -345,23 +430,22 @@ Rule reports include input and report digests. Malformed required evidence and i
 
 ## Project, revision, run, and review lifecycle
 
-CaeReflex adds operational history around immutable engineering evidence:
-
-```text
-Project
-  ├── Revision 1: immutable ReflexCase snapshot
-  ├── Revision 2: immutable ReflexCase snapshot
-  │       └── deterministic comparison with Revision 1
-  ├── Run records and append-only state events
-  └── Human review records
-          └── later decisions supersede; they do not overwrite
+```mermaid
+flowchart LR
+    P["Project"] --> R1["Revision 1"]
+    P --> R2["Revision 2"]
+    R1 --> C["Deterministic comparison"]
+    R2 --> C
+    P --> RUN["Run and append-only events"]
+    C --> H1["Human review"]
+    H1 --> H2["Superseding review"]
 ```
 
 Key properties:
 
 - project-local revision sequences and parent links;
 - canonical JSON snapshots verified by SHA-256;
-- restricted run transitions;
+- restricted run transitions and append-only events;
 - terminal runs cannot be reopened;
 - volatile timestamps are ignored by default during comparison;
 - changes use exact JSON-pointer paths;
@@ -573,7 +657,7 @@ Production, multi-user, cloud, regulated, or safety-critical deployment requires
 | `docs/` | Gate specifications and compact reference documents |
 | `wiki/docs/` | User guides, learning projects, architecture, developer, security, and release documentation |
 
-Start with:
+### Documentation
 
 - [Installation](wiki/docs/user-guide/install.md)
 - [Quickstart](wiki/docs/user-guide/quickstart.md)
@@ -608,9 +692,7 @@ CaeReflex is **source-available**, not OSI-approved open-source software.
 
 Academic research, teaching, coursework, non-commercial reproducibility, and non-commercial evaluation are permitted subject to the [CaeReflex Research Source Licence](LICENSE.md). Commercial use—including internal commercial R&D, paid services, production systems, commercial agent workflows, APIs, hosted services, and incorporation into products—requires a separate paid commercial licence.
 
-Commercial licensing and permissions: [ipcontrol@knowdyn.co.uk](mailto:ipcontrol@knowdyn.co.uk)
-
-See also:
+**Commercial licensing and permissions:** [ipcontrol@knowdyn.co.uk](mailto:ipcontrol@knowdyn.co.uk)
 
 - [Academic use](ACADEMIC_USE.md)
 - [Commercial licensing](COMMERCIAL_LICENSE.md)
