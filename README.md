@@ -1,595 +1,624 @@
 # CaeReflex
 
-## The problem
+> **Physics-AI systems cannot reason reliably over simulation work they cannot inspect. CaeReflex gives them a deterministic engineering-evidence layer.**
 
-Computer-aided engineering (CAE) projects often leave useful evidence scattered across solver folders, mesh files, result files, scripts, notes, and literature searches. A Gmsh geometry, an OpenFOAM case, a VTK/ParaView output, and a DOI search can all describe the same engineering question, but they usually live in formats that general-purpose LLM agents cannot safely inspect or cite without help.
+CaeReflex converts solver cases, meshes, field data, spatial relationships, physics checks, literature metadata, revision history, and human review into structured evidence that software agents can query and cite. It is local-first, read-only by design, and built to connect computer-aided engineering workflows with AI systems **without running solvers, mutating source cases, or pushing large numerical arrays into model context windows**.
 
-**That creates a practical gap. An engineer may have simulation cases on disk, while a Custom GPT, Claude agent, or other LLM assistant only sees a partial explanation typed into chat.**
+`2.0.0b5` · Python `3.10–3.12` · CLI + Python + REST/OpenAPI · Source-available
 
-## What the problem impedes
+| Investor view | Executive view | Engineer view |
+| --- | --- | --- |
+| A reusable infrastructure layer between simulation software and physics-aware AI, extensible across solver and data ecosystems. | A bounded, provenance-preserving service for integrating engineering evidence into internal AI and automation programmes. | Native inspection, lazy arrays, spatial graphs, deterministic rules, immutable revisions, temporal comparisons, and review records from one toolchain. |
 
-Without a structured evidence layer, agents and reviewers can struggle to:
+## Why CaeReflex exists
 
-- identify which CAE tools and file formats are present;
-- summarize case intent, detected inputs, and result consistently;
-- distinguish detected evidence from assumptions;
-- preserve provenance for where each piece of information came from;
-- surface inspection warnings before a human relies on the case;
-- connect a simulation case to related DOI/CrossRef metadata;
-- export agent-ready context, human-readable reports, and BibTeX references; and
-- avoid unsafe overclaims such as saying a simulation is validated, certified, converged, mesh-independent, or safe for final design.
+Simulation intelligence is usually trapped inside folders, proprietary workflows, binary-heavy datasets, solver conventions, and expert memory. A general-purpose AI system may receive a screenshot, a copied log, or a verbal summary, but not the structured evidence needed to distinguish:
 
-## The solution
+- what was actually present in the engineering files;
+- what was decoded exactly, inferred, supplied by a user, or unavailable;
+- which coordinate frame, field association, unit, time step, or source path applies;
+- what changed between two revisions;
+- which checks passed, failed, were blocked, or could not be evaluated;
+- what a human reviewer accepted, rejected, or superseded; and
+- which claims remain outside the evidence.
 
-CaeReflex is a source-available Python package that turns Gmsh, OpenFOAM, and ParaView/VTK-compatible simulations into structured, agent-readable, provenance-aware, CrossRef-grounded engineering cases.
+CaeReflex inserts a controlled evidence layer between CAE artefacts and downstream AI systems.
 
-It can be used from the command line, as a local REST/OpenAPI service, or as a data-preparation layer for an LLM agent workflow. The package inspects CAE simulations in read-only mode, creates a `ReflexCase` JSON record, exports agent context and reports, and can attach CrossRef literature metadata when explicitly requested.
-
-> **Safety boundary:** CaeReflex is an inspection and documentation aid. It does **not** run solvers, validate simulations, certify engineering results, prove convergence, assess mesh adequacy, or replace qualified engineering judgement.
-
-## What the solution achieves
-
-CaeReflex helps you give an LLM agent a safer, more complete view of an engineering case:
-
-- a normalized case identifier and summary;
-- detected CAE formats and tools;
-- extracted metadata from Gmsh, OpenFOAM, and VTK/ParaView-compatible simulations;
-- inspection status and warnings;
-- provenance events describing what was inspected or exported;
-- an agent-readable context object for Custom GPTs, Claude, and other agents;
-- Markdown reports for human review;
-- optional CrossRef literature context, DOI metadata, abstracts when available, and BibTeX export;
-- REST/OpenAPI endpoints for tool-calling agents; and
-- explicit guardrails against overclaiming validation or certification.
-
-## Supported simulations
-
-- Gmsh `.geo` files in core mode; `.msh` files with optional mesh extras.
-- OpenFOAM-like case folders through read-only text inspection.
-- VTK/ParaView-compatible result files with safe fallback behaviour.
-- CrossRef DOI metadata and available abstracts when explicitly requested.
-
-## Install options
-
-Install the package from a local checkout:
-
-```bash
-pip install -e .
+```text
+Engineering workspace
+    │
+    ├── Gmsh geometry / mesh
+    ├── OpenFOAM case / fields
+    ├── VTK datasets / collections
+    └── optional literature query
+            │
+            ▼
+Discovery manifest + bounded inspection plan
+            │
+            ▼
+Isolated native readers + deterministic fallbacks
+            │
+            ├── ReflexCase
+            ├── diagnostics and provenance
+            ├── content-addressed ArrayRef handles
+            └── immutable execution records
+            │
+            ▼
+Spatial graph + physics-rule reports
+            │
+            ▼
+Projects → revisions → runs → comparisons → human reviews
+            │
+            ▼
+CLI / Python / bounded REST/OpenAPI / tool-calling AI systems
 ```
 
-Install optional extras as needed:
+## What CaeReflex provides
+
+| Layer | Capability | Primary output |
+| --- | --- | --- |
+| Discovery | Bounded workspace cataloguing, format detection, adapter probing, incremental manifest diffs | `CaseManifest` |
+| Inspection | Read-only Gmsh, OpenFOAM, and VTK inspection with explicit fallback records | `ReflexCase` |
+| Native evidence | Isolated native backends for supported mesh, topology, field, and time metadata | `InspectionExecutionResult` |
+| Heavy data | Content-addressed artefacts and lazy, bounded numerical access | `ArrayRef` |
+| Units | Seven-component dimensional evidence, parsing, conversion, and compatibility checks | quantity evidence and dimensional checks |
+| Spatial evidence | Backend-neutral entities, coordinate frames, relations, bounds, and array links | persisted spatial graph |
+| Spatial queries | Bounded entity, relation, neighbourhood, bounds, frame, and array-link queries | deterministic query result |
+| Physics checks | Versioned deterministic rules with evidence pointers, remediation, and six-valued outcomes | rule evaluation report |
+| Literature | Explicitly requested DOI metadata and available abstracts | literature evidence and BibTeX |
+| Lifecycle | Projects, immutable revisions, restricted runs, and append-only events | lifecycle records |
+| Temporal review | Deterministic revision comparison using exact JSON-pointer paths | comparison report |
+| Human control | Append-only review statements with supersession and digest chaining | immutable review record |
+| Services | Synchronous case endpoints and bounded local asynchronous jobs | REST/OpenAPI responses |
+
+## What CaeReflex is — and is not
+
+CaeReflex is an **inspection, evidence, provenance, and workflow-control system** for simulation artefacts.
+
+It is not a solver, mesher, CAD repair tool, visualisation engine, optimisation engine, simulation validator, certification system, convergence proof, mesh-adequacy assessor, or autonomous engineering decision-maker.
+
+> **Safety boundary:** a consistent rule result means that the recorded evidence satisfied that rule. It does not establish numerical accuracy, physical validity, convergence, mesh independence, experimental validation, regulatory compliance, certification, or design safety.
+
+## Ten-minute start
+
+### 1. Install
 
 ```bash
-pip install -e ".[server]"   # REST/OpenAPI server for agent actions
-pip install -e ".[mesh]"     # optional mesh support
-pip install -e ".[vtk]"      # optional VTK/PyVista support
-pip install -e ".[gmsh]"     # optional Gmsh Python support
-pip install -e ".[all,dev]"  # everything plus test dependencies
-```
-
-## Learning projects
-
-A structured beginner-to-expert curriculum is available in the wiki at [`wiki/docs/learning/`](wiki/docs/learning/index.md), including CLI, Gmsh, OpenFOAM, VTK, CrossRef, REST/OpenAPI, agent-workflow, and adapter-extension projects.
-
-## Tutorial: local CAE folder to Custom GPT
-
-Use this tutorial when an engineer wants to run CaeReflex on a laptop, inspect a local folder that contains CAE artefacts, and make the resulting REST actions available to a Custom GPT. The examples assume your CAE cases live in `~/cae-workspace`; change that path to match your machine.
-
-### Step 1 — Prepare a workspace
-
-Choose one directory that CaeReflex will treat as the root for case imports. Put the CAE folders or files you want to inspect under that directory.
-
-```bash
-mkdir -p ~/cae-workspace
-# Example layout:
-# ~/cae-workspace/lid_driven_cavity/system/controlDict
-# ~/cae-workspace/bracket_mesh/model.geo
-# ~/cae-workspace/results/sample.vtk
-```
-
-When the REST server is started with `--workspace ~/cae-workspace`, paths sent by the Custom GPT should be relative to that workspace, such as `lid_driven_cavity` or `bracket_mesh/model.geo`.
-
-### Step 2 — Clone and install CaeReflex
-
-```bash
-git clone https://github.com/YOUR_ORG_OR_USER/CaeReflex.git
+git clone https://github.com/KNOWDYN/CaeReflex.git
 cd CaeReflex
+
 python -m venv .venv
 source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+
 python -m pip install --upgrade pip
 pip install -e ".[server]"
 ```
 
-Use additional extras only when needed:
+Optional native-reader dependencies:
 
 ```bash
-pip install -e ".[mesh]"   # deeper .msh inspection
-pip install -e ".[vtk]"    # VTK/PyVista readers
-pip install -e ".[gmsh]"   # Gmsh Python support
+pip install -e ".[mesh]"   # NumPy + meshio
+pip install -e ".[vtk]"    # PyVista + VTK
+pip install -e ".[gmsh]"   # Gmsh Python API
+pip install -e ".[all,dev]"
 ```
 
-### Step 3 — Smoke-test a local case from the CLI
-
-Run one CLI inspection before connecting a GPT. This confirms the installation, the workspace path, and adapter detection.
+### 2. Check the environment
 
 ```bash
-caereflex inspect ~/cae-workspace/lid_driven_cavity \
+caereflex version
+caereflex doctor
+caereflex adapters list
+caereflex execution backends
+```
+
+### 3. Inspect a case
+
+```bash
+caereflex inspect examples/openfoam_cavity_minimal \
+  --profile deep \
   --out caereflex.json \
+  --manifest-out manifest.json \
   --agent-context agent_context.json \
   --report case_report.md
 ```
 
-If your case is a single file, pass that file instead:
+The command produces a full `ReflexCase`, a discovery manifest, compact AI-ready context, and a human-readable report. With `deep` or `forensic`, supported cases also pass through the isolated native execution backend and may create spatial evidence and lazy array references.
+
+### 4. Evaluate deterministic physics rules
 
 ```bash
-caereflex inspect ~/cae-workspace/bracket_mesh/model.geo \
-  --out caereflex.json \
-  --agent-context agent_context.json
+caereflex physics evaluate-openfoam \
+  --case caereflex.json \
+  --out physics_report.json
 ```
 
-### Step 4 — Start the local REST/OpenAPI server
+The initial OpenFOAM CFD pack checks velocity, pressure, and viscosity dimensions; mesh face accounting; boundary-patch coverage; and field association. Missing evidence never becomes a pass.
+
+### 5. Create a governed revision
 
 ```bash
-caereflex serve --host 127.0.0.1 --port 8765 --workspace ~/cae-workspace
+caereflex lifecycle project-create "Pump study"
+# Copy the returned project_id.
+
+caereflex lifecycle revision-create PROJECT_ID \
+  --case caereflex.json \
+  --label baseline
 ```
 
-Check the server locally:
+Repeat the inspection after a design or setup change, create a second revision, then compare:
+
+```bash
+caereflex lifecycle compare \
+  PROJECT_ID \
+  BASELINE_REVISION_ID \
+  CANDIDATE_REVISION_ID \
+  --max-changes 200
+```
+
+### 6. Start the local service
+
+```bash
+caereflex serve \
+  --host 127.0.0.1 \
+  --port 8765 \
+  --workspace .
+```
 
 ```bash
 curl http://127.0.0.1:8765/health
 curl http://127.0.0.1:8765/openapi.yaml
 ```
 
-### Step 5 — Expose the server to Custom GPT Actions
+The service is localhost-first. Binding to a non-localhost address requires an API key.
 
-Custom GPT Actions need an HTTPS URL. Start a tunnel to the local CaeReflex server and keep the terminal running while you use the GPT.
+## Inspection model
 
-With ngrok:
+### Profiles
 
-```bash
-ngrok http 8765
-```
+| Profile | Purpose |
+| --- | --- |
+| `catalog` | Bounded discovery and inventory creation |
+| `standard` | Core adapter inspection and normalized `ReflexCase` output |
+| `deep` | Standard inspection plus isolated native execution where supported |
+| `forensic` | Native execution path for the highest-evidence inspection workflow currently supported by the selected backend |
 
-With Cloudflare Tunnel:
+Inspection remains read-only at every profile. Adapter and backend support determines what can be decoded; unsupported grammar becomes explicit diagnostics or fallback evidence rather than an invented result.
 
-```bash
-cloudflared tunnel --url http://127.0.0.1:8765
-```
+### Built-in adapters
 
-Copy the generated HTTPS base URL. Your OpenAPI schema URL will be:
+#### OpenFOAM
 
-```text
-https://YOUR-TUNNEL-HOST/openapi.yaml
-```
+CaeReflex can inspect case structure, dictionaries, `polyMesh` data, time directories, and supported ASCII fields. The native backend decodes bounded forms of:
 
-### Step 6 — Create the Custom GPT Action
+- points and bounds;
+- faces, owner, neighbour, and boundary records;
+- cell, internal-face, and boundary-face counts;
+- boundary-patch ranges;
+- uniform and non-uniform scalar, vector, and common tensor internal fields;
+- field classes, associations, and seven-component dimension vectors; and
+- field availability across time directories.
 
-In ChatGPT:
+It does not execute OpenFOAM, load solver libraries, expand code streams, or modify a case. Binary, directive-bearing, and unsupported inputs fall back with diagnostics.
 
-1. Open **Explore GPTs** and select **Create**.
-2. Open **Configure**.
-3. Add an action.
-4. Import the schema from `https://YOUR-TUNNEL-HOST/openapi.yaml`.
-5. If you run CaeReflex on a non-localhost host with an API key, configure the `x-api-key` authentication header.
-6. Save the GPT.
+#### Gmsh
 
-Suggested GPT instructions:
+Supported evidence paths include:
 
-```text
-You are a CaeReflex engineering-case reviewer.
+- declaration-only `.geo` inspection;
+- dependency-free bounded ASCII reading for MSH 2.x and 4.x;
+- optional `meshio` reading;
+- nodes, elements, entities, physical groups, bounds, and field records;
+- optional explicit Gmsh API inspection for selected CAD formats; and
+- fingerprint-only handling for STEP, IGES, and BREP by default.
 
-Use CaeReflex actions to check service health, import CAE cases from the configured workspace, retrieve agent context, inspect flags, and summarize findings for the user.
+The `.geo` path does not invoke Gmsh or execute scripts. Includes, loops, functions, system calls, extrusions, and boolean operations remain unresolved unless supported by a separately controlled path. The optional API path does not request mesh generation.
 
-When the user asks for a case review, first import the requested case path, then retrieve agent context and inspection flags. Use CrossRef actions only when the user asks for literature context.
-```
+#### VTK
 
-### Step 7 — Test the end-to-end flow
+Supported extensions include legacy VTK, XML datasets, parallel metadata, and collection formats:
 
-Ask the Custom GPT:
+`.vtk`, `.vtu`, `.vtp`, `.vti`, `.vtr`, `.vts`, `.pvtu`, `.pvtp`, `.pvti`, `.pvtr`, `.pvts`, `.pvd`, `.vtm`, and `.vtmb`.
 
-```text
-Check whether CaeReflex is healthy. Then import lid_driven_cavity, summarize the agent context, and list the inspection flags.
-```
+Evidence may include:
 
-For a single-file case, use the workspace-relative file path:
+- points, bounds, structured extents, and rectilinear coordinates;
+- connectivity, offsets, and cell types;
+- point, cell, and field data through lazy array references;
+- collection references and time values; and
+- ordered PyVista/VTK, `meshio`, core ASCII/XML, and fingerprint fallbacks.
 
-```text
-Import bracket_mesh/model.geo, summarize the detected CAE metadata, and show the generated inspection flags.
-```
+Collection and parallel references are inventoried; external references are not automatically fetched or traversed.
 
-### Step 8 — Optional: call the REST API manually
+### Adapter plugins
 
-You can test the same import without ChatGPT:
-
-```bash
-curl -X POST "http://127.0.0.1:8765/cases/import" \
-  -H "Content-Type: application/json" \
-  -d '{"path":"lid_driven_cavity","adapter":"auto","attach_crossref":false,"return_agent_context":true}'
-```
-
-Use the returned `case_id` to retrieve the compact context:
-
-```bash
-curl "http://127.0.0.1:8765/cases/CASE_ID/agent-context"
-```
-
-## Full hands-on example: localhost CaeReflex + Custom GPT or Claude + CrossRef
-
-This example starts with a fresh clone, serves CaeReflex on localhost, exposes it securely for a browser-based agent, connects either a Custom GPT or Claude-style agent, imports a bundled OpenFOAM example, and attaches CrossRef research metadata.
-
-### Prerequisites
-
-You need:
-
-- Python 3.10 or newer;
-- `git`;
-- a browser;
-- a ChatGPT account with Custom GPT Actions if testing a Custom GPT;
-- a Claude environment that can call tools from an OpenAPI schema, or a developer-mediated Claude tool wrapper;
-- an HTTPS tunnel for browser-hosted agents, because Custom GPT Actions and most hosted agent systems cannot call `http://localhost` directly.
-
-For a quick tunnel, use one of:
-
-- Cloudflare Tunnel;
-- ngrok;
-- GitHub Codespaces port forwarding;
-- another HTTPS reverse proxy that forwards to `localhost:8765`.
-
-### 1. Clone and install CaeReflex
-
-```bash
-git clone https://github.com/YOUR_ORG_OR_USER/CaeReflex.git
-cd CaeReflex
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -e ".[all,dev]"
-```
-
-On Windows PowerShell, activate the virtual environment with:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### 2. Confirm the CLI works
-
-```bash
-caereflex version
-caereflex examples list
-```
-
-You should see the installed package version and the bundled example names.
-
-### 3. Generate a local example case from the CLI
-
-```bash
-caereflex examples run openfoam_cavity_minimal
-caereflex inspect examples/openfoam_cavity_minimal \
-  --out caereflex.json \
-  --agent-context agent_context.json \
-  --report case_report.md
-```
-
-This creates:
-
-- `caereflex.json` — the full structured ReflexCase;
-- `agent_context.json` — compact agent-readable context;
-- `case_report.md` — a human-readable Markdown report.
-
-### 4. Attach CrossRef literature metadata from the CLI
-
-Use a focused query that matches the simulation domain. For the bundled cavity-style example, you can start with:
-
-```bash
-caereflex crossref attach caereflex.json \
-  --query "lid driven cavity CFD OpenFOAM" \
-  --limit 5 \
-  --mailto your.email@example.com \
-  --out caereflex.with_literature.json
-```
-
-Then export BibTeX references:
-
-```bash
-caereflex export bibtex caereflex.with_literature.json --out references.bib
-```
-
-If you want a deterministic offline CrossRef-style test, use the bundled mock data:
-
-```bash
-caereflex crossref attach examples/crossref_context/sample_case.json \
-  --mock-response examples/crossref_context/mock_crossref_response.json \
-  --out caereflex.with_literature.json
-```
-
-### 5. Start the localhost REST/OpenAPI server
-
-```bash
-caereflex serve --host 127.0.0.1 --port 8765 --workspace .
-```
-
-Open these URLs in your browser:
-
-- `http://127.0.0.1:8765/health`
-- `http://127.0.0.1:8765/version`
-- `http://127.0.0.1:8765/openapi.yaml`
-
-The OpenAPI document is what browser-based agents use to discover CaeReflex actions.
-
-### 6. Expose localhost through HTTPS for hosted agents
-
-A Custom GPT normally cannot call `http://127.0.0.1:8765` on your machine. You need an HTTPS URL that forwards to the local server.
-
-Example with ngrok:
-
-```bash
-ngrok http 8765
-```
-
-Example with Cloudflare Tunnel:
-
-```bash
-cloudflared tunnel --url http://127.0.0.1:8765
-```
-
-Copy the generated HTTPS URL, for example:
+Additional adapters can be registered through the Python entry-point group:
 
 ```text
-https://your-tunnel.example.trycloudflare.com
+caereflex.adapters
 ```
 
-Your agent schema URL will be:
+Each plugin declares formats, geometry/topology/field support, units behaviour, optional dependencies, fallback modes, network requirements, and source-execution requirements.
+
+## Evidence and data contracts
+
+CaeReflex keeps compact evidence in JSON and heavy numerical payloads behind verified handles.
+
+### Primary records
+
+| Record | Role |
+| --- | --- |
+| `ReflexCase` | Normalized case identity, evidence, diagnostics, provenance, summaries, and references |
+| `CaseManifest` | Bounded inventory of selected workspace paths and format hints |
+| `InspectionPlan` | Explicit selected paths, profile, backend candidates, and budgets |
+| `InspectionExecutionResult` | Backend identity, attempts, diagnostics, artefacts, arrays, status, and source-mutation evidence |
+| `ArrayRef` | Lazy handle carrying shape, type, checksum, association, backend, time, frame, and permitted operations |
+| `SpatialGraphSnapshot` | Compact entities, frames, relations, bounds, and array links |
+| `RuleEvaluationReport` | Versioned rule outcomes, exact evidence pointers, missing evidence, remediation, and digests |
+| `RevisionRecord` | Immutable canonical `ReflexCase` snapshot with SHA-256 digest |
+| `TemporalComparison` | Deterministic structural changes between verified revisions |
+| `HumanReviewRecord` | Append-only decision and statement linked to recorded evidence |
+
+### Current protocol versions
+
+| Contract | Version |
+| --- | --- |
+| Package | `2.0.0b5` |
+| ReflexCase schema | `1.0` |
+| Backend-neutral inspection contract | `2.0-alpha.3` |
+| Gate 5 backend-result envelope | `caereflex.gate5.backend-result/1.0` |
+| Spatial graph | `1.0` |
+| Spatial mapping | `caereflex.spatial-mapping/1.0` |
+| Spatial query | `caereflex.spatial-query/1.0` |
+| Gate 6 spatial acceptance | `caereflex.gate6.spatial/1.0` |
+| Physics-rule protocol | `caereflex.physics-rule/1.0` |
+| OpenFOAM CFD rule pack | `caereflex.openfoam-cfd/1.0.0` |
+| Project/revision/run lifecycle | `caereflex.lifecycle/1.0` |
+| Temporal comparison | `caereflex.temporal-comparison/1.0` |
+| Human review | `caereflex.human-review/1.0` |
+| Asynchronous jobs | `caereflex.async-job/1.0` |
+
+## Heavy arrays without prompt inflation
+
+Large coordinates, connectivity, field values, memberships, and topology arrays are stored in the local content-addressed artefact store rather than embedded in `ReflexCase` JSON.
+
+`ArrayRef` exposes metadata and permitted operations. The CLI provides bounded access:
+
+```bash
+caereflex arrays list
+caereflex arrays describe ARRAY_ID
+caereflex arrays sample ARRAY_ID --count 100
+caereflex arrays slice ARRAY_ID --start 0 --stop 100
+caereflex arrays reduce ARRAY_ID --operation mean
+```
+
+Returned element counts are bounded, slices are checked, and reductions stream over the artefact rather than materialising an unrestricted array in JSON.
+
+## Spatial evidence
+
+Native OpenFOAM, Gmsh, and VTK evidence can be mapped into a backend-neutral spatial graph. The graph separates geometry, mesh, grouping, and dataset identities and records coordinate-frame evidence without assuming global axes, metres, zero origins, handedness, or cross-format equivalence.
+
+Heavy coordinates and connectivity stay behind `ArrayRef` links.
+
+```bash
+caereflex spatial version
+caereflex spatial graphs --case-id CASE_ID
+caereflex spatial show GRAPH_ID
+caereflex spatial frames GRAPH_ID
+caereflex spatial entities GRAPH_ID --kinds mesh_cell,mesh_face
+caereflex spatial relations GRAPH_ID --entity-id ENTITY_ID
+caereflex spatial neighbours GRAPH_ID ENTITY_ID --depth 2
+caereflex spatial bounds GRAPH_ID \
+  --frame-id FRAME_ID \
+  --minimum "0,0,0" \
+  --maximum "1,1,1"
+caereflex spatial arrays GRAPH_ID
+caereflex spatial validate GRAPH_ID
+```
+
+Spatial queries are read-only and bounded. They use recorded relations and same-frame bounds; they do not invent adjacency, compose unresolved transforms, infer units, or assert cross-format equivalence.
+
+## Deterministic physics-consistency rules
+
+The physics-rule protocol requires every rule to declare:
+
+- identity and version;
+- applicability;
+- required evidence;
+- assumptions and limitations;
+- default severity;
+- evidence pointers;
+- remediation; and
+- deterministic result semantics.
+
+The six possible outcomes are:
+
+`consistent`, `inconsistent`, `unknown`, `not_applicable`, `not_evaluated`, and `blocked`.
+
+```bash
+caereflex physics version
+caereflex physics evaluate-openfoam --case caereflex.json
+```
+
+Rule reports include input and report digests. Malformed required evidence and internal rule exceptions fail closed as `blocked`.
+
+## Project, revision, run, and review lifecycle
+
+CaeReflex adds operational history around immutable engineering evidence:
 
 ```text
-https://your-tunnel.example.trycloudflare.com/openapi.yaml
+Project
+  ├── Revision 1: immutable ReflexCase snapshot
+  ├── Revision 2: immutable ReflexCase snapshot
+  │       └── deterministic comparison with Revision 1
+  ├── Run records and append-only state events
+  └── Human review records
+          └── later decisions supersede; they do not overwrite
 ```
 
-> **Security note:** For public or team use, run CaeReflex with an API key on a non-localhost host, restrict the workspace, and do not expose private simulation folders or proprietary data through a public tunnel.
+Key properties:
 
-### 7A. Connect a Custom GPT to CaeReflex
+- project-local revision sequences and parent links;
+- canonical JSON snapshots verified by SHA-256;
+- restricted run transitions;
+- terminal runs cannot be reopened;
+- volatile timestamps are ignored by default during comparison;
+- changes use exact JSON-pointer paths;
+- detailed comparisons are bounded and explicitly marked when truncated;
+- review rows cannot be updated or deleted; and
+- optional signature metadata is preserved but not independently authenticated.
 
-In ChatGPT:
-
-1. Open **Explore GPTs**.
-2. Select **Create**.
-3. Open **Configure**.
-4. Name the GPT, for example `CaeReflex Engineering Case Reviewer`.
-5. Add an action.
-6. Import the OpenAPI schema from your tunnel URL:
-
-   ```text
-   https://your-tunnel.example.trycloudflare.com/openapi.yaml
-   ```
-
-7. If you run CaeReflex with an external API key, configure action authentication with this header:
-
-   ```text
-   x-api-key
-   ```
-
-8. Add these Custom GPT instructions:
-
-```text
-You are a CaeReflex engineering-case reviewer.
-
-Use CaeReflex actions to inspect and summarize CAE simulations, retrieve agent context, review inspection flags, and summarize optional CrossRef literature metadata.
-
-Always call the health endpoint first when beginning a live API workflow. When the user provides a case path, import the case, retrieve the agent context, retrieve inspection flags, and then summarize the result.
-
-Never claim that CaeReflex validates a simulation, certifies engineering safety, proves convergence, assesses mesh adequacy, confirms physical correctness, or replaces qualified engineering judgement.
-
-Separate detected evidence from assumptions. Clearly identify warnings, missing evidence, provenance, and recommended human follow-up checks.
-
-Only use CrossRef search or attach when the user explicitly asks for literature context. Treat CrossRef records as metadata and available abstracts only; do not claim to have read full papers unless full text is provided.
+```bash
+caereflex lifecycle version
+caereflex lifecycle project-list
+caereflex lifecycle project-show PROJECT_ID
+caereflex lifecycle revision-list PROJECT_ID
+caereflex lifecycle revision-show REVISION_ID --include-case
+caereflex lifecycle run-list PROJECT_ID
+caereflex lifecycle run-show RUN_ID
+caereflex lifecycle review-list PROJECT_ID
 ```
 
-9. Test with this prompt:
+## CLI reference
 
-```text
-Check whether the CaeReflex API is healthy. Then import examples/openfoam_cavity_minimal, summarize the agent context, list inspection flags, and tell me what a qualified engineer would still need to verify.
-```
+| Command group | Operations |
+| --- | --- |
+| Core | `version`, `doctor`, `scan`, `inspect`, `serve` |
+| Adapters | `adapters list`, `adapters info`, `adapters probe` |
+| Units | `units parse`, `units convert`, `units check` |
+| Execution | `execution backends`, `execution run` |
+| Arrays | `arrays list`, `arrays describe`, `arrays sample`, `arrays slice`, `arrays reduce` |
+| Spatial | `spatial version`, `graphs`, `show`, `frames`, `entities`, `relations`, `neighbours`, `bounds`, `arrays`, `validate` |
+| Physics | `physics version`, `physics evaluate-openfoam` |
+| Lifecycle | `lifecycle version`, project, revision, run, comparison, and review commands |
+| Jobs | `jobs list`, `jobs show` |
+| Literature | `crossref search`, `crossref attach` |
+| Export | `export agent-context`, `export markdown`, `export bibtex` |
+| Schema | `schema show`, `schema validate` |
+| Diagnostics | `diagnostics list`, `diagnostics explain` |
+| Cache | `cache clean` |
+| Examples | `examples list`, `examples run` |
 
-10. Test CrossRef through the agent with:
+Use `caereflex COMMAND --help` or `caereflex GROUP COMMAND --help` for complete options and limits.
 
-```text
-Attach CrossRef literature context to the imported case using the query "lid driven cavity CFD OpenFOAM" with a limit of 5, then summarize the DOI metadata without claiming validation.
-```
-
-### 7B. Connect a Claude agent to CaeReflex
-
-Claude connection depends on the environment you use. The safe pattern is the same: give Claude a tool wrapper or OpenAPI-derived tool definitions that call the CaeReflex REST endpoints.
-
-#### Claude option 1: OpenAPI-capable agent environment
-
-If your Claude environment can import an OpenAPI schema:
-
-1. Start CaeReflex and the HTTPS tunnel as shown above.
-2. Import:
-
-   ```text
-   https://your-tunnel.example.trycloudflare.com/openapi.yaml
-   ```
-
-3. Configure the optional `x-api-key` header if your server requires it.
-4. Add this system/developer instruction:
-
-```text
-You are using CaeReflex as a read-only CAE evidence inspection service.
-
-Use the health endpoint before live workflows. Use case import, agent-context, inspection-flags, literature, CrossRef attach/search, and export endpoints only as needed.
-
-Do not claim validation, certification, convergence, mesh adequacy, physical correctness, or design safety. Explain findings as detected metadata, inspection results, provenance, warnings, and literature metadata.
-```
-
-5. Test with:
-
-```text
-Use the CaeReflex tool to import examples/openfoam_cavity_minimal from the configured workspace. Summarize the case, show inspection warnings, and recommend next engineering checks.
-```
-
-#### Claude option 2: developer-mediated tool wrapper
-
-If Claude cannot import OpenAPI directly, create a small wrapper in your application that exposes these operations to Claude:
-
-- `health()` → `GET /health`
-- `import_engineering_case(path, adapter="auto", attach_crossref=false)` → `POST /cases/import`
-- `get_agent_context(case_id)` → `GET /cases/{case_id}/agent-context`
-- `get_inspection_flags(case_id)` → `GET /cases/{case_id}/inspection-flags`
-- `crossref_attach(case_id, query, limit)` → `POST /cases/{case_id}/crossref/attach`
-- `get_literature(case_id)` → `GET /cases/{case_id}/literature`
-
-Minimal Python wrapper example:
+## Python API
 
 ```python
-import httpx
+from pathlib import Path
 
-BASE_URL = "https://your-tunnel.example.trycloudflare.com"
-API_KEY = None  # or "your-api-key"
+from caereflex.contracts import InspectionProfile
+from caereflex.services import export_case, inspect_path, save_case
 
+source = Path("examples/openfoam_cavity_minimal")
 
-def headers():
-    return {"x-api-key": API_KEY} if API_KEY else {}
+case = inspect_path(
+    source,
+    adapter="auto",
+    profile=InspectionProfile.deep,
+)
 
-
-def health():
-    return httpx.get(f"{BASE_URL}/health", headers=headers()).json()
-
-
-def import_engineering_case(path: str, adapter: str = "auto", attach_crossref: bool = False):
-    payload = {
-        "path": path,
-        "adapter": adapter,
-        "attach_crossref": attach_crossref,
-        "return_agent_context": True,
-    }
-    return httpx.post(f"{BASE_URL}/cases/import", json=payload, headers=headers()).json()
-
-
-def get_agent_context(case_id: str):
-    return httpx.get(f"{BASE_URL}/cases/{case_id}/agent-context", headers=headers()).json()
-
-
-def get_inspection_flags(case_id: str):
-    return httpx.get(f"{BASE_URL}/cases/{case_id}/inspection-flags", headers=headers()).json()
-
-
-def crossref_attach(case_id: str, query: str, limit: int = 5):
-    payload = {"query": query, "limit": limit, "include_case_tags": True}
-    return httpx.post(
-        f"{BASE_URL}/cases/{case_id}/crossref/attach",
-        json=payload,
-        headers=headers(),
-    ).json()
-
-
-def get_literature(case_id: str):
-    return httpx.get(f"{BASE_URL}/cases/{case_id}/literature", headers=headers()).json()
+save_case(case, "caereflex.json")
+export_case(case, "agent-context", "agent_context.json")
+export_case(case, "markdown", "case_report.md")
 ```
 
-Tool-use instruction for Claude:
+Lifecycle and comparison example:
 
-```text
-Call import_engineering_case first when the user asks about a simulation folder. Then call get_agent_context and get_inspection_flags. Call crossref_attach only when the user asks for related research. Never claim validation or certification.
+```python
+from caereflex.lifecycle import LifecycleStore, compare_revisions
+from caereflex.services import load_case
+
+store = LifecycleStore(".caereflex")
+project = store.create_project("Pump study")
+
+baseline_case = load_case("baseline.caereflex.json")
+candidate_case = load_case("candidate.caereflex.json")
+
+baseline = store.create_revision(project.project_id, baseline_case.model_dump(mode="json"))
+candidate = store.create_revision(project.project_id, candidate_case.model_dump(mode="json"))
+
+comparison = compare_revisions(
+    store,
+    project.project_id,
+    baseline.revision_id,
+    candidate.revision_id,
+)
 ```
 
-### 8. REST calls you can test manually
+## REST/OpenAPI service
 
-Import a case:
+Install the server extra and start a workspace-bound service:
 
 ```bash
-curl -X POST "http://127.0.0.1:8765/cases/import" \
-  -H "Content-Type: application/json" \
-  -d '{"path":"examples/openfoam_cavity_minimal","adapter":"auto","attach_crossref":false,"return_agent_context":true}'
+pip install -e ".[server]"
+
+caereflex serve \
+  --host 127.0.0.1 \
+  --port 8765 \
+  --workspace /trusted/engineering/workspace
 ```
 
-List cases:
+For a non-localhost bind:
 
 ```bash
-curl "http://127.0.0.1:8765/cases"
+caereflex serve \
+  --host 0.0.0.0 \
+  --port 8765 \
+  --workspace /trusted/engineering/workspace \
+  --api-key "$CAEREFLEX_API_KEY"
 ```
 
-Retrieve agent context, replacing `CASE_ID` with the ID returned by import:
+The server exposes its generated schema at `/openapi.yaml`.
+
+### Endpoint groups
+
+| Group | Endpoints |
+| --- | --- |
+| Service | `GET /health`, `GET /version`, `GET /lifecycle/version`, `GET /openapi.yaml` |
+| Cases | `POST /cases/import`, `GET /cases`, `GET /cases/{case_id}`, summary, agent-context, literature, and inspection-flags endpoints |
+| Literature | case-scoped CrossRef search and attach |
+| Export | case-scoped JSON, Markdown, and BibTeX export |
+| Projects | create, list, retrieve, and archive |
+| Revisions | create/list by project and retrieve by revision |
+| Runs | list by project and retrieve with append-only events |
+| Comparisons | create and retrieve |
+| Reviews | create and filtered list |
+| Jobs | submit inspection/comparison, list, and retrieve |
+
+### Service bounds
+
+Defaults and hard limits include:
+
+- request body: 1 MiB default; configurable between 1 KiB and 10 MiB;
+- list responses: at most 100 records through REST;
+- CrossRef result limit: at most 50;
+- comparison details: at most 500 changes;
+- asynchronous workers: 1–8;
+- queued jobs: 0–128;
+- options: at most 32 keys;
+- metadata: bounded key count and serialized size; and
+- every REST filesystem path must remain inside the configured workspace.
+
+The asynchronous executor is local and in-process, not a distributed queue. Pending or running lifecycle jobs left by a stopped service are failed closed during recovery rather than silently resumed.
+
+## Literature evidence
+
+Literature lookup is opt-in. Ordinary discovery, inspection, spatial queries, rules, lifecycle operations, and exports do not make hidden literature-service calls.
 
 ```bash
-curl "http://127.0.0.1:8765/cases/CASE_ID/agent-context"
+caereflex crossref search caereflex.json \
+  --query "lid driven cavity CFD" \
+  --limit 5 \
+  --out literature.json
+
+caereflex crossref attach caereflex.json \
+  --query "lid driven cavity CFD" \
+  --limit 5 \
+  --out caereflex.with_literature.json
+
+caereflex export bibtex caereflex.with_literature.json \
+  --out references.bib
 ```
 
-Retrieve inspection flags:
+Only generated or user-supplied query strings and API parameters are sent. Raw simulation files are not transmitted. Returned records are metadata and available abstracts, not proof that a full paper was read or that a simulation is valid.
 
-```bash
-curl "http://127.0.0.1:8765/cases/CASE_ID/inspection-flags"
-```
+## Security model
 
-Attach CrossRef metadata:
+CaeReflex is designed around a narrow, inspectable boundary:
 
-```bash
-curl -X POST "http://127.0.0.1:8765/cases/CASE_ID/crossref/attach" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"lid driven cavity CFD OpenFOAM","include_case_tags":true,"limit":5}'
-```
+- localhost-first service deployment;
+- mandatory API key for non-localhost binding;
+- workspace-contained REST paths;
+- bounded scanning, execution time, result size, request size, arrays, and queries;
+- sanitised deep-execution environment by default;
+- network and child-process guards in the Python worker;
+- before-and-after source snapshots;
+- content-addressed artefacts with integrity verification;
+- explicit parser attempts and fallbacks;
+- no solver, mesher, shell, visualisation-pipeline, or source-mutation endpoints; and
+- no hidden external literature calls.
 
-Retrieve literature context:
+The worker is **not a complete operating-system sandbox**. Native libraries can bypass Python-level controls. Untrusted, proprietary, regulated, or safety-critical inputs may require a container, virtual machine, restricted operating-system account, or institutionally managed worker.
 
-```bash
-curl "http://127.0.0.1:8765/cases/CASE_ID/literature"
-```
+See [SECURITY.md](SECURITY.md) for the full security boundary and responsible-disclosure process.
 
-## What CaeReflex can give users through an agent
+## Deployment patterns
 
-Through a Custom GPT, Claude agent, or another LLM tool-calling workflow, CaeReflex can provide:
+CaeReflex can serve as:
 
-- **Case overview:** stable case ID, summary, detected formats, detected tools, and inspection status.
-- **Agent-readable context:** compact JSON designed for LLM workflows.
-- **Inspection warnings:** flags for missing, unsupported, partial, or potentially risky evidence.
-- **Provenance:** records of inspection and export events.
-- **Simulation inventory:** detected files and metadata from supported CAE folders and files.
-- **OpenFOAM awareness:** read-only inspection of OpenFOAM-like case folders.
-- **Gmsh awareness:** inspection of `.geo` files and optional `.msh` mesh files.
-- **VTK/ParaView awareness:** inspection of VTK-compatible result files with safe fallback behaviour.
-- **Markdown reports:** human-readable engineering case summaries.
-- **JSON exports:** full ReflexCase records for downstream tools.
-- **BibTeX export:** references generated from attached literature records.
-- **REST/OpenAPI actions:** endpoints that browser-hosted agents can call as tools.
-- **Safety framing:** reminders that inspection is not validation, certification, or engineering sign-off.
+- a workstation tool for inspecting individual simulation cases;
+- an evidence-preparation stage for physics-aware AI systems;
+- a local or internal REST service for engineering tools;
+- a provenance layer for simulation-data pipelines;
+- a deterministic pre-check layer before human review;
+- a revision and review ledger for model-development workflows; or
+- an adapter framework for additional engineering formats.
 
-## What CrossRef integration can give users
+Production, multi-user, cloud, regulated, or safety-critical deployment requires additional identity, authorization, HTTPS termination, isolation, logging, observability, secrets management, and operational controls. CaeReflex does not provide OAuth, RBAC, tenant isolation, or a hosted platform boundary.
 
-When explicitly requested, CrossRef integration can add research context such as:
+## Repository map
 
-- DOI records related to a case or query;
-- article titles, authors, journals, publishers, and publication dates when available;
-- abstracts when available from CrossRef metadata;
-- generated literature-context summaries;
-- case-tag-informed searches;
-- BibTeX-ready reference exports;
-- traceability between simulation context and related research metadata; and
-- safer agent answers that distinguish literature metadata from engineering proof.
+| Path | Contents |
+| --- | --- |
+| `caereflex/` | Package source |
+| `caereflex/adapters/` | Core format adapters |
+| `caereflex/execution/` | Isolated execution runtime and backends |
+| `caereflex/spatial/` | Spatial contracts, mapping, persistence, queries, and acceptance checks |
+| `caereflex/physics/` | Physics-rule protocol and rule packs |
+| `caereflex/lifecycle/` | Projects, revisions, runs, comparisons, reviews, and async jobs |
+| `openapi/` | Generated JSON and YAML API contracts |
+| `examples/` | Small offline example cases and mock literature data |
+| `tests/` | Core, optional-backend, gate, compatibility, and malformed-input tests |
+| `docs/` | Gate specifications and compact reference documents |
+| `wiki/docs/` | User guides, learning projects, architecture, developer, security, and release documentation |
 
-CrossRef results should be treated as metadata and available abstracts, not as a guarantee that the full paper was read or that the simulation is correct.
+Start with:
 
-## Quickstart
+- [Installation](wiki/docs/user-guide/install.md)
+- [Quickstart](wiki/docs/user-guide/quickstart.md)
+- [Safe execution and arrays](wiki/docs/user-guide/safe-execution-and-arrays.md)
+- [Native OpenFOAM inspection](wiki/docs/user-guide/native-openfoam-inspection.md)
+- [Native Gmsh inspection](wiki/docs/user-guide/native-gmsh-inspection.md)
+- [Native VTK inspection](wiki/docs/user-guide/native-vtk-inspection.md)
+- [Spatial queries](wiki/docs/user-guide/spatial-queries.md)
+- [Architecture overview](wiki/docs/architecture/index.md)
+- [REST API architecture](wiki/docs/architecture/rest-api.md)
+- [CLI reference](wiki/docs/reference/cli.md)
+- [OpenAPI reference](wiki/docs/reference/openapi.md)
+- [Licensing reference](wiki/docs/reference/licensing.md)
 
-```bash
-caereflex examples list
-caereflex examples run openfoam_cavity_minimal
-caereflex inspect examples/openfoam_cavity_minimal --out caereflex.json
-caereflex export agent-context caereflex.json --out agent_context.json
-caereflex export markdown caereflex.json --out case_report.md
-```
+## Testing and release controls
 
-## Supported files
+The repository maintains separate checks for:
 
-- `QUICKSTART.md` — short offline and mock-CrossRef commands.
-- `docs/CLI.md` — CLI command overview and exit codes.
-- `docs/REST_API.md` — REST endpoint overview.
-- `docs/AGENT_INTEGRATION.md` — agent integration modes and safety rules.
-- `docs/REFLEXCASE_SCHEMA.md` — ReflexCase schema reference.
-- `docs/EXAMPLES.md` — bundled example notes.
-- `docs/LICENSING.md` — license overview.
+- deterministic core behaviour across Python 3.10, 3.11, and 3.12;
+- optional Gmsh and VTK dependencies;
+- native-reader compatibility;
+- malformed-input and fault-injection behaviour;
+- spatial acceptance;
+- physics-rule determinism; and
+- lifecycle, immutable review, asynchronous jobs, and bounded REST services.
 
-## Licence summary
+The checked-in OpenAPI documents, package metadata, citation metadata, changelog, and release documentation are validated against the package version.
 
-CaeReflex is source-available. Academic research, teaching, and non-commercial evaluation are free. Commercial use requires a paid commercial licence. CaeReflex is not released under an OSI-approved open-source licence.
+## Licence
 
-See `LICENSE.md`, `ACADEMIC_USE.md`, and `COMMERCIAL_LICENSE.md`.
+CaeReflex is **source-available**, not OSI-approved open-source software.
+
+Academic research, teaching, coursework, non-commercial reproducibility, and non-commercial evaluation are permitted subject to the [CaeReflex Research Source Licence](LICENSE.md). Commercial use—including internal commercial R&D, paid services, production systems, commercial agent workflows, APIs, hosted services, and incorporation into products—requires a separate paid commercial licence.
+
+Commercial licensing and permissions: [ipcontrol@knowdyn.co.uk](mailto:ipcontrol@knowdyn.co.uk)
+
+See also:
+
+- [Academic use](ACADEMIC_USE.md)
+- [Commercial licensing](COMMERCIAL_LICENSE.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Citation metadata](CITATION.cff)
+
+## Responsible use
+
+CaeReflex output must remain evidence, not authority. Qualified engineers remain responsible for verification, validation, convergence assessment, mesh studies, experiments, regulatory interpretation, design decisions, and professional sign-off.
+
+Report security issues privately using the contact in [SECURITY.md](SECURITY.md).
