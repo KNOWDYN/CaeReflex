@@ -5,14 +5,6 @@
 <p align="center"><strong>Turn simulation artefacts into deterministic, provenance-preserving evidence that AI systems can inspect, query, compare, and cite.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml"><img alt="Core CI" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml"><img alt="Native Readers" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml"><img alt="Spatial Contracts" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml"><img alt="Physics Rules" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml"><img alt="Lifecycle Services" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml/badge.svg?branch=main"></a>
-</p>
-
-<p align="center">
   <img alt="Release 2.0.0b5" src="https://img.shields.io/badge/release-2.0.0b5-6f42c1?style=flat-square">
   <img alt="Python 3.10 through 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
   <img alt="CLI, Python and REST OpenAPI interfaces" src="https://img.shields.io/badge/interfaces-CLI%20%7C%20Python%20%7C%20REST%2FOpenAPI-0f766e?style=flat-square">
