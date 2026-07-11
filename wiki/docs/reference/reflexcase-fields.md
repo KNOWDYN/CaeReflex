@@ -40,6 +40,8 @@ Gate 5A stores compact execution results under `metadata.inspection_execution`. 
 
 Gate 6A stores compact spatial graph references under `metadata.spatial_graph_refs`. Each reference contains a graph ID, SQLite store URI, graph and contract versions, default-frame ID, compact counts and update time. Complete entities, relations, frames and arrays remain outside ReflexCase.
 
+Gate 6B deep and forensic native inspection also stores compact mapping reports under `metadata.spatial_mapping`. A report identifies the mapping version, backend, execution and graph IDs, graph counts, mapped and skipped array counts, and mapping diagnostics. It does not embed graph or numerical payloads and does not assert cross-format equivalence.
+
 ## ArrayRef
 
 Required compatibility fields:
@@ -86,4 +88,4 @@ A compact spatial graph reference contains:
 - `array_link_count`
 - `updated_at`
 
-The reference does not contain coordinates, connectivity, full graph payloads or inferred coordinate assumptions.
+The reference does not contain coordinates, connectivity, full graph payloads, inferred coordinate assumptions or a claim that entities from different backends are equivalent.
