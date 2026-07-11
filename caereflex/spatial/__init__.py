@@ -26,9 +26,8 @@ from caereflex.spatial.mapping import (
     SpatialMappingDiagnostic,
     SpatialMappingError,
     SpatialMappingResult,
-    build_spatial_mapping,
-    persist_spatial_mapping,
 )
+from caereflex.spatial.mapping_api import build_spatial_mapping, persist_spatial_mapping
 from caereflex.spatial.service import attach_spatial_graph_ref, spatial_graph_refs
 from caereflex.spatial.store import SpatialStore, SpatialStoreError
 
