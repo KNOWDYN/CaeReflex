@@ -48,6 +48,7 @@ nav:
   - Architecture:
       - Overview: architecture/index.md
       - ReflexCase Schema: architecture/reflexcase-schema.md
+      - Spatial Evidence: architecture/spatial-evidence.md
       - Services Layer: architecture/services-layer.md
       - Adapters: architecture/adapters.md
       - Exporters: architecture/exporters.md
@@ -67,6 +68,7 @@ nav:
       - Security: reference/security.md
   - Releases:
       - Overview: releases/index.md
+      - 2.0.0b1: releases/2.0.0b1.md
       - 2.0.0a5: releases/2.0.0a5.md
       - 2.0.0a4: releases/2.0.0a4.md
       - 2.0.0a3: releases/2.0.0a3.md

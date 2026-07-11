@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.0b1 — Gate 6A spatial contracts and coordinate frames
+
+- Added canonical backend-neutral spatial entity families for geometry, mesh, grouping and dataset evidence.
+- Added versioned relations for containment, boundaries, adjacency, connectivity, discretisation, membership, field carriage, mapping and derivation.
+- Added coordinate-frame contracts with explicit origin, basis, dimensionality, handedness, length-unit evidence, parent transforms, confidence and review states.
+- Kept unresolved frames genuinely unresolved: CaeReflex does not assume metres, global axes, zero origins or right-handed orientation.
+- Added compact axis-aligned bounds with explicit frame references.
+- Added ArrayRef-only links for coordinates, connectivity, offsets, cell types, memberships, fields and transforms.
+- Added compact-metadata limits that reject binary payloads, non-finite numbers and materialised heavy arrays.
+- Added a SQLite spatial repository with graph-scoped foreign keys, parent-cycle checks, transactional snapshot import, deterministic export and integrity checks.
+- Added compact spatial graph references to ReflexCase metadata without embedding graph or array payloads.
+- Kept ReflexCase schema `1.0` and backend-neutral contract `2.0-alpha.3`; the Gate 6A spatial graph format is versioned independently as `1.0`.
+- Added no backend mappings, spatial inference, coordinate transformation, physics rules or engineering validation in this foundation release.
+
 ## 2.0.0a5 — Gate 5 compatibility freeze and malformed-input hardening
 
 - Froze the built-in execution-backend envelope as `caereflex.gate5.backend-result/1.0`.
