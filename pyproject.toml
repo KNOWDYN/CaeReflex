@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "caereflex"
-version = "2.0.0b2"
+version = "2.0.0b3"
 description = "Agent-readable engineering evidence layer for Gmsh, OpenFOAM, VTK and CrossRef metadata."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -47,7 +47,7 @@ all = [
 ]
 
 [project.scripts]
-caereflex = "caereflex.cli.main:app"
+caereflex = "caereflex.cli.app:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["caereflex"]

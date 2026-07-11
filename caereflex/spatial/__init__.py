@@ -1,4 +1,4 @@
-"""Canonical spatial evidence contracts, mapping and persistence."""
+"""Canonical spatial evidence contracts, mapping, queries and persistence."""
 from caereflex.spatial.contracts import (
     SPATIAL_GRAPH_VERSION,
     AxisAlignedBounds,
@@ -28,18 +28,43 @@ from caereflex.spatial.mapping import (
     SpatialMappingResult,
 )
 from caereflex.spatial.mapping_api import build_spatial_mapping, persist_spatial_mapping
+from caereflex.spatial.query import (
+    SPATIAL_QUERY_VERSION,
+    SpatialBoundsMode,
+    SpatialQueryDiagnostic,
+    SpatialQueryError,
+    SpatialQueryLimits,
+    SpatialQueryResult,
+    SpatialQueryService,
+    SpatialTraversalDirection,
+)
+from caereflex.spatial.compatibility import (
+    GATE6_FREEZE_VERSION,
+    SpatialCompatibilityError,
+    SpatialCompatibilityIssue,
+    SpatialCompatibilityReport,
+    validate_spatial_query_result,
+    validate_spatial_snapshot,
+    validate_spatial_store,
+)
 from caereflex.spatial.service import attach_spatial_graph_ref, spatial_graph_refs
 from caereflex.spatial.store import SpatialStore, SpatialStoreError
 
 __all__ = [
     "SPATIAL_GRAPH_VERSION",
     "SPATIAL_MAPPING_VERSION",
+    "SPATIAL_QUERY_VERSION",
+    "GATE6_FREEZE_VERSION",
     "SUPPORTED_MAPPING_BACKENDS",
     "AxisAlignedBounds",
     "CoordinateFrame",
     "CoordinateHandedness",
     "SpatialArrayLink",
     "SpatialArrayRole",
+    "SpatialBoundsMode",
+    "SpatialCompatibilityError",
+    "SpatialCompatibilityIssue",
+    "SpatialCompatibilityReport",
     "SpatialContractError",
     "SpatialDomain",
     "SpatialEntity",
@@ -53,13 +78,22 @@ __all__ = [
     "SpatialMappingDiagnostic",
     "SpatialMappingError",
     "SpatialMappingResult",
+    "SpatialQueryDiagnostic",
+    "SpatialQueryError",
+    "SpatialQueryLimits",
+    "SpatialQueryResult",
+    "SpatialQueryService",
     "SpatialRelation",
     "SpatialRelationKind",
     "SpatialReviewStatus",
     "SpatialStore",
     "SpatialStoreError",
+    "SpatialTraversalDirection",
     "attach_spatial_graph_ref",
     "build_spatial_mapping",
     "persist_spatial_mapping",
     "spatial_graph_refs",
+    "validate_spatial_query_result",
+    "validate_spatial_snapshot",
+    "validate_spatial_store",
 ]

@@ -1,0 +1,62 @@
+name: Gate 6 Freeze
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  spatial:
+    name: Spatial queries and acceptance — Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install core and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Compile spatial package
+        run: python -m compileall -q caereflex/spatial caereflex/cli caereflex/diagnostics
+
+      - name: Run Gate 6 freeze tests
+        id: tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pytest -q --tb=short \
+            tests/test_gate6a_spatial_contracts.py \
+            tests/test_gate6a_spatial_store.py \
+            tests/test_gate6b_backend_mapping.py \
+            tests/test_gate6b_services_integration.py \
+            tests/test_gate6c_spatial_queries_freeze.py \
+            tests/test_gate6c_spatial_cli.py \
+            2>&1 | tee gate6-freeze-${{ matrix.python-version }}.log
+
+      - name: Upload Gate 6 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate6-freeze-${{ matrix.python-version }}
+          path: gate6-freeze-${{ matrix.python-version }}.log
+          if-no-files-found: error
+
+      - name: Fail when Gate 6 tests fail
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

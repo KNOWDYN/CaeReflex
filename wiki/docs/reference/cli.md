@@ -23,8 +23,18 @@ Current CLI command surface:
 | `arrays sample` | Return a deterministic bounded sample. |
 | `arrays slice` | Return a bounded flat slice. |
 | `arrays reduce` | Run a streaming min, max, mean, sum or count reduction. |
+| `spatial graphs` | List persisted canonical spatial graphs. |
+| `spatial show` | Describe one graph with compact statistics and frames. |
+| `spatial frames` | Filter coordinate frames by evidence and review state. |
+| `spatial entities` | Filter entities by kind, domain, frame, dimension, name or source path. |
+| `spatial relations` | Filter stored relations by endpoint, kind and direction. |
+| `spatial neighbours` | Traverse recorded graph relations under depth and scan limits. |
+| `spatial bounds` | Match entity bounds inside one exact named coordinate frame. |
+| `spatial arrays` | List ArrayRef links by owner and spatial role. |
+| `spatial validate` | Run the frozen Gate 6 compatibility checks. |
+| `spatial version` | Print the spatial-query and Gate 6 freeze versions. |
 | `adapters list` | List installed adapter capabilities. |
-| `adapters info` | Show the declared capabilities, dependencies, fallbacks, and licence metadata for one adapter. |
+| `adapters info` | Show declared capabilities, dependencies, fallbacks, and licence metadata for one adapter. |
 | `adapters probe` | Build a manifest and report which installed adapters match it. |
 | `schema show` | Print the generated ReflexCase JSON Schema. |
 | `schema validate` | Validate a stored ReflexCase and report its schema and contract versions. |
@@ -48,9 +58,7 @@ caereflex units convert 1 bar Pa --json
 caereflex units check "m/s" velocity --name U --json
 ```
 
-`units parse` and `units convert` use Pint. CaeReflex serialises ordinary JSON values only; Pint objects never appear in ReflexCase or agent payloads.
-
-`units check` compares base dimensions, not names. A conflict emits `CRX-UNITS-DIMENSION-MISMATCH-001` and blocks automated interpretation until reviewed. Dimensional compatibility does not prove physical role.
+`units parse` and `units convert` use Pint. CaeReflex serialises ordinary JSON values only; Pint objects never appear in ReflexCase or agent payloads. Dimensional compatibility does not prove physical role.
 
 OpenFOAM dimensions use `[mass length time temperature substance current luminosity]`. Gmsh and VTK coordinates and fields do not establish units by themselves, so native summaries preserve units as unresolved unless explicit evidence supplies them.
 
@@ -59,33 +67,10 @@ OpenFOAM dimensions use `[mass length time temperature substance current luminos
 ```bash
 caereflex doctor
 caereflex scan examples/openfoam_cavity_minimal --out openfoam-manifest.json
-caereflex scan examples/gmsh_minimal/t1.geo --out gmsh-manifest.json
-caereflex scan examples/vtk_minimal/sample.vtk --out vtk-manifest.json
 caereflex execution backends
 ```
 
-`scan` accepts `--max-files`, `--max-depth`, `--max-bytes-read`, and `--max-wall-time`. Reaching a limit produces an explicit truncated manifest.
-
-Run completed native backends directly:
-
-```bash
-caereflex execution run openfoam-manifest.json \
-  --source-root examples/openfoam_cavity_minimal \
-  --backend openfoam.native \
-  --json
-
-caereflex execution run gmsh-manifest.json \
-  --source-root examples/gmsh_minimal/t1.geo \
-  --backend gmsh.native \
-  --json
-
-caereflex execution run vtk-manifest.json \
-  --source-root examples/vtk_minimal/sample.vtk \
-  --backend vtk.native \
-  --json
-```
-
-The worker applies parent-enforced wall time, bounded serialised output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
+`scan` accepts file, depth, byte and wall-time limits. The execution worker applies parent-enforced wall time, bounded serialised output, selected-path containment, source snapshots and Python-level network/process guards. This is defence in depth, not a complete operating-system sandbox.
 
 ## Native deep inspection
 
@@ -93,29 +78,32 @@ The worker applies parent-enforced wall time, bounded serialised output, selecte
 caereflex inspect examples/openfoam_cavity_minimal \
   --adapter openfoam --profile deep \
   --out openfoam.caereflex.json
-
-caereflex inspect examples/gmsh_minimal/t1.geo \
-  --adapter gmsh --profile deep \
-  --out gmsh.caereflex.json
-
-caereflex inspect examples/vtk_minimal/sample.vtk \
-  --adapter vtk --profile deep \
-  --out vtk.caereflex.json
 ```
 
-OpenFOAM uses `openfoam.native`, Gmsh uses `gmsh.native`, and VTK uses `vtk.native`. Outputs include execution metadata, ordered parser attempts, diagnostics and bounded lazy-array references.
+OpenFOAM uses `openfoam.native`, Gmsh uses `gmsh.native`, and VTK uses `vtk.native`. Deep and forensic inspection also persist a canonical spatial graph when mapping succeeds.
 
-The Gmsh `.geo` path is declaration-only. VTK collection and parallel metadata are reference/time inventories only; they do not cause hidden external-reference loading.
+## Spatial queries
+
+```bash
+caereflex spatial graphs --state-root .caereflex
+caereflex spatial show GRAPH_ID --state-root .caereflex --json
+caereflex spatial entities GRAPH_ID --kinds mesh_cell,patch --state-root .caereflex
+caereflex spatial relations GRAPH_ID --entity-id ENTITY_ID --direction both --state-root .caereflex
+caereflex spatial neighbours GRAPH_ID ENTITY_ID --depth 2 --state-root .caereflex
+caereflex spatial bounds GRAPH_ID --frame-id FRAME_ID \
+  --minimum 0,0,0 --maximum 1,1,1 --state-root .caereflex
+caereflex spatial arrays GRAPH_ID --owner-entity-id ENTITY_ID --state-root .caereflex
+caereflex spatial validate GRAPH_ID --state-root .caereflex --json
+```
+
+Spatial responses are deterministic and bounded. Bounds are compared only in the exact requested frame; no transform or unit conversion is inferred. Neighbour traversal follows stored relations only. Array-link queries do not return numerical values.
 
 ## Jobs and arrays
 
 ```bash
 caereflex jobs list
-caereflex jobs show JOB_ID --json
-caereflex arrays list
 caereflex arrays describe ARRAY_ID --json
 caereflex arrays sample ARRAY_ID --count 100 --json
-caereflex arrays slice ARRAY_ID --start 0 --stop 100 --json
 caereflex arrays reduce ARRAY_ID --operation mean --json
 ```
 
@@ -125,8 +113,6 @@ Array queries are allowed only when declared by the `ArrayRef` and are capped by
 
 Commands exposing `--json` emit JSON on standard output. Human-readable status text is suppressed in JSON mode.
 
-## Compatibility
+## Compatibility and limits of claims
 
-The `inspect-gmsh`, `inspect-openfoam`, and `inspect-vtk` aliases remain available during migration to `inspect --adapter ...`. Schema-v1 ReflexCase payloads remain valid because Gate 5 contract extensions are additive.
-
-Successful command execution does not establish simulation validity, geometry validity, convergence, mesh adequacy, certification or design safety.
+The legacy format-specific aliases remain available. Schema-v1 ReflexCase payloads remain valid because all Gate 6 references are additive. Successful inspection, query or Gate 6 acceptance does not establish simulation validity, geometry validity, convergence, mesh adequacy, cross-format equivalence, certification or design safety.
