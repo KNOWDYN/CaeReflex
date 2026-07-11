@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0b3 — Gate 6C spatial queries and acceptance freeze
+
+- Added the versioned `caereflex.spatial-query/1.0` read-only query service over persisted canonical graphs.
+- Added bounded graph, frame, entity, relation, recorded-neighbour, same-frame bounds and ArrayRef-link queries.
+- Added deterministic ordering, pagination, metadata-scan ceilings, traversal-depth limits, relation-scan limits and serialized-response limits.
+- Kept heavy arrays behind existing content-addressed `ArrayRef` handles; spatial queries never materialise numerical payloads.
+- Added same-frame bounds matching without implicit coordinate transforms or unit conversion.
+- Added recorded-relation traversal without coordinate-, connectivity- or name-based adjacency inference.
+- Froze Gate 6 acceptance as `caereflex.gate6.spatial/1.0` with canonical snapshot digests, ArrayRef registry checks, SQLite foreign-key checks and bounded-query smoke tests.
+- Added the `caereflex spatial` CLI group and a dedicated Gate 6 freeze workflow on Python 3.10–3.12.
+- Completed Gate 6 without asserting cross-format equivalence, geometry correctness, mesh adequacy, physics validity or engineering safety.
+
 ## 2.0.0b2 — Gate 6B backend-to-graph mapping
 
 - Added deterministic `caereflex.spatial-mapping/1.0` translation from validated `openfoam.native`, `gmsh.native` and `vtk.native` execution results into Gate 6A spatial graphs.
@@ -115,7 +127,7 @@
 - Added `doctor`, `scan`, `adapters`, `schema`, `diagnostics`, and `cache` CLI commands.
 - Preserved existing inspection, export, CrossRef, example, and format-specific compatibility commands.
 - Embedded discovery manifests and diagnostics into ReflexCase and agent-context exports.
-- Added Gate 1–3 architecture, CLI, and plugin documentation.
+- Added Gate 1–3 architecture, CLI and plugin documentation.
 
 ## 1.0.0 — Initial public release
 
