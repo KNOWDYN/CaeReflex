@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0b2 — Gate 6B backend-to-graph mapping
+
+- Added conservative mapping from frozen Gate 5 OpenFOAM, Gmsh and VTK execution results into the canonical Gate 6 spatial graph.
+- Added deterministic graph, entity, relation and array-link identifiers.
+- Mapped OpenFOAM polyMesh evidence, patches and fields without inferring adjacency, units or global coordinates.
+- Mapped Gmsh geometry declarations, native entities and physical groups while keeping geometry and mesh identities distinct.
+- Mapped VTK datasets, bounds and heavy arrays into dataset blocks without asserting region equivalence.
+- Preserved coordinates, connectivity, offsets, cell types, memberships and fields behind existing content-addressed ArrayRef handles.
+- Kept all backend-derived coordinate frames unresolved unless explicit frame evidence is present.
+- Added policy limits for entity and relation counts and deterministic cross-backend acceptance tests.
+- Kept spatial graph format `1.0`, ReflexCase schema `1.0` and inspection contract `2.0-alpha.3`.
+- Added no cross-format equivalence, coordinate composition, adjacency inference, mesh-quality judgement or engineering validation.
+
 ## 2.0.0b1 — Gate 6A spatial contracts and coordinate frames
 
 - Added canonical backend-neutral spatial entity families for geometry, mesh, grouping and dataset evidence.
