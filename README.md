@@ -1,6 +1,6 @@
 <h1 align="center">CaeReflex</h1>
 
-<h3 align="center">The engineering-evidence control plane for Physics-AI</h3>
+<h3 align="center">The Missing Middleware between CAE and LLMs</h3>
 
 <p align="center"><strong>Turn simulation artefacts into deterministic, provenance-preserving evidence that AI systems can inspect, query, compare, and cite.</strong></p>
 
