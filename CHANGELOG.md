@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0b4 — Gate 7 deterministic physics-consistency rules
+
+- Added the versioned `caereflex.physics-rule/1.0` protocol with explicit applicability, required evidence, assumptions, remediation and limitation contracts.
+- Added deterministic outcomes: `consistent`, `inconsistent`, `unknown`, `not_applicable`, `not_evaluated` and `blocked`.
+- Added exact JSON-pointer evidence references, deterministic rule ordering, stable run IDs and canonical SHA-256 report digests.
+- Added the first built-in rule pack, `openfoam.cfd-core/1.0.0`, with six rules for mesh topology, boundary partitioning, field cardinality, dimensions, patch references and time controls.
+- Reused the content-addressed ArrayRef registry for bounded topology-label and offset verification without embedding heavy arrays.
+- Added the `caereflex rules` CLI group and additive ReflexCase attachment under `metadata.physics_consistency`.
+- Added a dedicated Gate 7 workflow on Python 3.10–3.12.
+- Explicitly excluded convergence, mesh adequacy or independence, turbulence-model suitability, experimental validation, certification and design-safety claims.
+
 ## 2.0.0b3 — Gate 6C spatial queries and acceptance freeze
 
 - Added the versioned `caereflex.spatial-query/1.0` read-only query service over persisted canonical graphs.
@@ -113,7 +124,7 @@
 - Corrected OpenFOAM `FoamFile` class parsing so scalar, vector and tensor field rank comes from the source header.
 - Added OpenFOAM field and transport-property dimensional extraction with raw-text fallback and stable diagnostics.
 - Distinguished thermodynamic pressure from incompressible kinematic pressure.
-- Added `units parse`, `units convert` and `units check` CLI commands.
+- Added `units parse`, `units convert`, and `units check` CLI commands.
 - Added units summaries to ReflexCase, agent context and Markdown reports without removing legacy payload keys.
 - Added human-control diagnostics for missing, malformed, ambiguous and conflicting dimensions.
 - Added Gate 4 user, CLI and architecture documentation and semantic regression tests.
@@ -127,7 +138,7 @@
 - Added `doctor`, `scan`, `adapters`, `schema`, `diagnostics`, and `cache` CLI commands.
 - Preserved existing inspection, export, CrossRef, example, and format-specific compatibility commands.
 - Embedded discovery manifests and diagnostics into ReflexCase and agent-context exports.
-- Added Gate 1–3 architecture, CLI and plugin documentation.
+- Added Gate 1–3 architecture, CLI, and plugin documentation.
 
 ## 1.0.0 — Initial public release
 
