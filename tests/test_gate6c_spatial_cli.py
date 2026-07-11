@@ -15,7 +15,7 @@ runner = CliRunner()
 
 
 def _deep_graph(tmp_path: Path) -> tuple[Path, str, str]:
-    source = Path(__file__).resolve().parents[1] / "examples" / "openfoam_cavity_native"
+    source = Path(__file__).resolve().parents[1] / "examples" / "openfoam_cavity_minimal"
     state = tmp_path / "state"
     case = inspect_path(
         source,
