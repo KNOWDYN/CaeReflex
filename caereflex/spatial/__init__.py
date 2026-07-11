@@ -28,7 +28,7 @@ from caereflex.spatial.mapping import (
     map_openfoam,
     map_vtk,
 )
-from caereflex.spatial.service import attach_spatial_graph_ref, spatial_graph_refs
+from caereflex.spatial.service import attach_spatial_graph_ref, map_persist_attach, spatial_graph_refs
 from caereflex.spatial.store import SpatialStore, SpatialStoreError
 
 __all__ = [
@@ -59,6 +59,7 @@ __all__ = [
     "map_execution_result",
     "map_gmsh",
     "map_openfoam",
+    "map_persist_attach",
     "map_vtk",
     "spatial_graph_refs",
 ]
