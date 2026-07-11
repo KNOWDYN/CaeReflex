@@ -28,5 +28,9 @@ jobs:
           python -m pip install -e ".[server,dev]"
       - name: Compile Gate 8 packages
         run: python -m compileall -q caereflex/lifecycle caereflex/cli/lifecycle.py caereflex/server/app.py
+      - name: Generate bounded OpenAPI contract
+        run: python -c "from caereflex.server.app import generate_openapi_files; generate_openapi_files('build/openapi')"
+      - name: Smoke-test lifecycle CLI
+        run: caereflex lifecycle version
       - name: Run Gate 8 acceptance tests
         run: python -m pytest -q --tb=short tests/test_gate8_lifecycle.py
