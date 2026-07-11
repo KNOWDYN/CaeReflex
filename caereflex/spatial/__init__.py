@@ -1,4 +1,4 @@
-"""Canonical spatial evidence contracts and persistence."""
+"""Canonical spatial evidence contracts, mapping and persistence."""
 from caereflex.spatial.contracts import (
     SPATIAL_GRAPH_VERSION,
     AxisAlignedBounds,
@@ -20,11 +20,22 @@ from caereflex.spatial.contracts import (
     SpatialRelationKind,
     SpatialReviewStatus,
 )
+from caereflex.spatial.mapping import (
+    SPATIAL_MAPPING_VERSION,
+    SUPPORTED_MAPPING_BACKENDS,
+    SpatialMappingDiagnostic,
+    SpatialMappingError,
+    SpatialMappingResult,
+    build_spatial_mapping,
+    persist_spatial_mapping,
+)
 from caereflex.spatial.service import attach_spatial_graph_ref, spatial_graph_refs
 from caereflex.spatial.store import SpatialStore, SpatialStoreError
 
 __all__ = [
     "SPATIAL_GRAPH_VERSION",
+    "SPATIAL_MAPPING_VERSION",
+    "SUPPORTED_MAPPING_BACKENDS",
     "AxisAlignedBounds",
     "CoordinateFrame",
     "CoordinateHandedness",
@@ -40,11 +51,16 @@ __all__ = [
     "SpatialGraphRef",
     "SpatialGraphSnapshot",
     "SpatialGraphStatus",
+    "SpatialMappingDiagnostic",
+    "SpatialMappingError",
+    "SpatialMappingResult",
     "SpatialRelation",
     "SpatialRelationKind",
     "SpatialReviewStatus",
     "SpatialStore",
     "SpatialStoreError",
     "attach_spatial_graph_ref",
+    "build_spatial_mapping",
+    "persist_spatial_mapping",
     "spatial_graph_refs",
 ]
