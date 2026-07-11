@@ -20,7 +20,7 @@ from caereflex.spatial.contracts import (
     SpatialRelationKind,
     SpatialReviewStatus,
 )
-from caereflex.spatial.service import attach_spatial_graph_ref
+from caereflex.spatial.service import attach_spatial_graph_ref, spatial_graph_refs
 from caereflex.spatial.store import SpatialStore, SpatialStoreError
 
 __all__ = [
@@ -46,4 +46,5 @@ __all__ = [
     "SpatialStore",
     "SpatialStoreError",
     "attach_spatial_graph_ref",
+    "spatial_graph_refs",
 ]
