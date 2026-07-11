@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "caereflex"
-version = "2.0.0a5"
+version = "2.0.0b1"
 description = "Agent-readable engineering evidence layer for Gmsh, OpenFOAM, VTK and CrossRef metadata."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ authors = [{name = "CaeReflex Project"}]
 license = {file = "LICENSE.md"}
 keywords = ["CAE", "CFD", "OpenFOAM", "Gmsh", "VTK", "CrossRef", "LLM agents"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
