@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0b5 — Gate 8 lifecycle, review and bounded services
+
+- Added versioned project, immutable revision and run lifecycle records with SHA-256-verified ReflexCase snapshots and append-only run events.
+- Added deterministic bounded temporal comparisons with exact JSON-pointer changes, volatile-time exclusions, truncation and stable comparison digests.
+- Added append-only human reviews with controlled decisions, supersession links, optional signature metadata and digest chaining; existing review rows cannot be updated or deleted.
+- Added bounded in-process asynchronous inspection and comparison jobs over the persistent job store, including fail-closed recovery of interrupted work.
+- Added workspace-bound REST endpoints with request-body, list, metadata, worker, queue and comparison limits, plus the `caereflex lifecycle` CLI group.
+- Kept ReflexCase schema `1.0` and inspection contract `2.0-alpha.3`; lifecycle protocols are independently versioned and do not establish validation, reviewer identity or engineering safety.
+
 ## 2.0.0b4 — Gate 7 deterministic physics-consistency rules
 
 - Added versioned `caereflex.physics-rule/1.0` contracts with explicit applicability, required evidence, assumptions, limitations, remediation and six-valued outcomes.
@@ -83,7 +92,7 @@
 - Added safe declaration-only `.geo` inspection with restricted numeric evaluation and explicit non-execution of includes, loops, system calls, booleans and extrusions.
 - Added fingerprint-only STEP/IGES/BREP handling by default and an explicit opt-in isolated Gmsh API path that never requests mesh generation.
 - Added ordered meshio → core ASCII → fingerprint fallback records and stable Gmsh diagnostics.
-- Routed `deep` and `forensic` Gmsh inspection through the native backend.
+- Routed `deep` and `forensic` Gmsh inspection through the native reader while retaining `core.manifest-audit` for other adapters.
 - Kept coordinate and field units unresolved unless supplied by evidence.
 
 ## 2.0.0a2 — Gate 5B native OpenFOAM inspection
