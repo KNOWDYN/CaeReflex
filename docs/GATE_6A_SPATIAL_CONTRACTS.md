@@ -89,11 +89,13 @@ This prevents full industrial arrays from entering SQLite graph payloads, Reflex
 
 ## SQLite repository
 
-The default repository uses the existing CaeReflex state database:
+The default repository uses a local CaeReflex state database:
 
 ```text
-~/.caereflex/catalog.sqlite3
+.caereflex/catalog.sqlite3
 ```
+
+Callers may supply another state root explicitly, including the shared configured CaeReflex state directory.
 
 Tables are graph-scoped and enforce foreign keys between:
 
