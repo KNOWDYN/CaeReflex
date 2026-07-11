@@ -1,4 +1,4 @@
-"""Central diagnostic catalogue used by CLI, manifests, units, execution, and adapters."""
+"""Central diagnostic catalogue used by CLI, manifests, units, execution, spatial mapping, and adapters."""
 from __future__ import annotations
 
 DIAGNOSTICS: dict[str, dict[str, str]] = {
@@ -106,6 +106,16 @@ DIAGNOSTICS: dict[str, dict[str, str]] = {
         "title": "Artefact integrity check failed",
         "explanation": "A content-addressed artefact did not match its recorded SHA-256 digest or resolved outside the configured store.",
         "action": "Stop using the artefact, preserve logs, and recreate the local state directory from trusted sources.",
+    },
+    "CRX-SPATIAL-MAP-001": {
+        "title": "Native evidence could not be mapped to a spatial graph",
+        "explanation": "The Gate 6B mapper rejected or could not persist a native backend summary without inventing spatial evidence.",
+        "action": "Keep the native execution result, inspect the mapping diagnostic, and correct the backend summary or ArrayRef registry before retrying.",
+    },
+    "CRX-SPATIAL-MAP-ARRAY-001": {
+        "title": "Spatial array ownership unresolved",
+        "explanation": "A valid ArrayRef could not be associated with a canonical entity because its native source asset or role did not match the backend summary.",
+        "action": "Preserve the ArrayRef as unmapped and review its source_asset_id, association and native role; do not guess ownership.",
     },
     "CRX-OPENFOAM-NATIVE-FALLBACK-001": {
         "title": "OpenFOAM mesh decoding fell back",
