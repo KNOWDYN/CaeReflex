@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0b4 — Gate 7 deterministic physics-consistency rules
+
+- Added versioned `caereflex.physics-rule/1.0` contracts with explicit applicability, required evidence, assumptions, limitations, remediation and six-valued outcomes.
+- Added deterministic fail-closed evaluation with canonical input and report digests.
+- Added `caereflex.openfoam-cfd/1.0.0`, checking U, p and nu dimensions, topology counts, patch ranges and field associations.
+- Added exact JSON-pointer evidence paths and explicit missing-evidence records.
+- Added `caereflex physics` CLI commands and a Python 3.10–3.12 Gate 7 workflow.
+- Explicitly excluded convergence, mesh independence, turbulence-model suitability, experimental validation, certification and design safety.
+
 ## 2.0.0b3 — Gate 6C spatial queries and acceptance freeze
 
 - Added the versioned `caereflex.spatial-query/1.0` read-only query service over persisted canonical graphs.
@@ -113,7 +122,7 @@
 - Corrected OpenFOAM `FoamFile` class parsing so scalar, vector and tensor field rank comes from the source header.
 - Added OpenFOAM field and transport-property dimensional extraction with raw-text fallback and stable diagnostics.
 - Distinguished thermodynamic pressure from incompressible kinematic pressure.
-- Added `units parse`, `units convert` and `units check` CLI commands.
+- Added `units parse`, `units convert`, and `units check` CLI commands.
 - Added units summaries to ReflexCase, agent context and Markdown reports without removing legacy payload keys.
 - Added human-control diagnostics for missing, malformed, ambiguous and conflicting dimensions.
 - Added Gate 4 user, CLI and architecture documentation and semantic regression tests.
@@ -127,7 +136,7 @@
 - Added `doctor`, `scan`, `adapters`, `schema`, `diagnostics`, and `cache` CLI commands.
 - Preserved existing inspection, export, CrossRef, example, and format-specific compatibility commands.
 - Embedded discovery manifests and diagnostics into ReflexCase and agent-context exports.
-- Added Gate 1–3 architecture, CLI and plugin documentation.
+- Added Gate 1–3 architecture, CLI, and plugin documentation.
 
 ## 1.0.0 — Initial public release
 
