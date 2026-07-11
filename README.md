@@ -1,27 +1,41 @@
-<div align="center">
+<h1 align="center">CaeReflex</h1>
 
-# CaeReflex
+<h3 align="center">The engineering-evidence control plane for Physics-AI</h3>
 
-### The engineering-evidence control plane for Physics-AI
+<p align="center"><strong>Turn simulation artefacts into deterministic, provenance-preserving evidence that AI systems can inspect, query, compare, and cite.</strong></p>
 
-**Turn simulation artefacts into deterministic, provenance-preserving evidence that AI systems can inspect, query, compare, and cite.**
+<p align="center">
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml"><img alt="Core CI" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml"><img alt="Native Readers" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml"><img alt="Spatial Contracts" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml"><img alt="Physics Rules" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml"><img alt="Lifecycle Services" src="https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml/badge.svg?branch=main"></a>
+</p>
 
-[![Core CI](https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KNOWDYN/CaeReflex/actions/workflows/ci.yml)
-[![Native Readers](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml/badge.svg?branch=main)](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate5-freeze.yml)
-[![Spatial Contracts](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml/badge.svg?branch=main)](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate6-freeze.yml)
-[![Physics Rules](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml/badge.svg?branch=main)](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate7-physics.yml)
-[![Lifecycle Services](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml/badge.svg?branch=main)](https://github.com/KNOWDYN/CaeReflex/actions/workflows/gate8-lifecycle.yml)
+<p align="center">
+  <img alt="Release 2.0.0b5" src="https://img.shields.io/badge/release-2.0.0b5-6f42c1?style=flat-square">
+  <img alt="Python 3.10 through 3.12" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
+  <img alt="CLI, Python and REST OpenAPI interfaces" src="https://img.shields.io/badge/interfaces-CLI%20%7C%20Python%20%7C%20REST%2FOpenAPI-0f766e?style=flat-square">
+  <img alt="Local-first deployment" src="https://img.shields.io/badge/deployment-local--first-1f6feb?style=flat-square">
+  <img alt="Read-only source policy" src="https://img.shields.io/badge/source%20policy-read--only-2ea44f?style=flat-square">
+  <img alt="Source-available licence" src="https://img.shields.io/badge/licence-source--available-8b5cf6?style=flat-square">
+</p>
 
-![Release](https://img.shields.io/badge/release-2.0.0b5-6f42c1?style=flat-square)
-![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&logo=python&logoColor=white)
-![Interfaces](https://img.shields.io/badge/interfaces-CLI%20%7C%20Python%20%7C%20REST%2FOpenAPI-0f766e?style=flat-square)
-![Deployment](https://img.shields.io/badge/deployment-local--first-1f6feb?style=flat-square)
-![Source policy](https://img.shields.io/badge/source%20policy-read--only-2ea44f?style=flat-square)
-![Licence](https://img.shields.io/badge/licence-source--available-8b5cf6?style=flat-square)
-
-[**Quickstart**](#ten-minute-start) · [**Architecture**](#system-architecture) · [**Platform stack**](#the-platform-stack) · [**CLI**](#cli-reference) · [**REST/OpenAPI**](#restopenapi-service) · [**Security**](#security-model) · [**Commercial licensing**](#licence)
-
-</div>
+<p align="center">
+  <a href="#ten-minute-start"><strong>Quickstart</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#system-architecture"><strong>Architecture</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#the-platform-stack"><strong>Platform stack</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#cli-reference"><strong>CLI</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#restopenapi-service"><strong>REST/OpenAPI</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#security-model"><strong>Security</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="#licence"><strong>Commercial licensing</strong></a>
+</p>
 
 ---
 
