@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0b6 — Platform positioning and release coherence
+
+- Consolidated the current 2.0 beta platform identity across package metadata, citation metadata, release documentation, security support and the public product surfaces.
+- Repositioned CaeReflex as deterministic engineering-evidence infrastructure for Physics-AI, organised around the Inspect, Structure, Reason and Govern layers.
+- Documented the integrated native-reader, evidence-contract, spatial, physics-rule and governed-lifecycle architecture without adding unsupported adoption, performance or acquisition claims.
+- Added a strategic and commercial evaluation pathway while preserving local-first operation, source-available licensing and the explicit engineering-safety boundary.
+- Corrected stale wiki release facts and navigation that still identified `1.0.0` or stopped before Gates 7 and 8.
+- Kept all runtime, REST, CLI and protocol behaviour compatible with `2.0.0b5`; ReflexCase schema remains `1.0` and the backend-neutral inspection contract remains `2.0-alpha.3`.
+
 ## 2.0.0b5 — Gate 8 lifecycle, review and bounded services
 
 - Added versioned project, immutable revision and run lifecycle records with SHA-256-verified ReflexCase snapshots and append-only run events.
