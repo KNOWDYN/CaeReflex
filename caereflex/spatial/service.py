@@ -5,6 +5,15 @@ from caereflex.core.models import ReflexCase
 from caereflex.spatial.contracts import SpatialGraphRef
 from caereflex.spatial.store import SpatialStore
 
+SPATIAL_GRAPH_REFS_KEY = "spatial_graph_refs"
+
+
+def spatial_graph_refs(case: ReflexCase) -> list[dict]:
+    """Return validated-looking compact references from additive case metadata."""
+
+    value = case.metadata.get(SPATIAL_GRAPH_REFS_KEY, [])
+    return list(value) if isinstance(value, list) else []
+
 
 def attach_spatial_graph_ref(
     case: ReflexCase,
@@ -22,9 +31,12 @@ def attach_spatial_graph_ref(
         reference = graph
 
     payload = reference.model_dump(mode="json")
-    case.spatial_graph_refs = [
-        item for item in case.spatial_graph_refs if item.get("graph_id") != reference.graph_id
+    references = [
+        item
+        for item in spatial_graph_refs(case)
+        if isinstance(item, dict) and item.get("graph_id") != reference.graph_id
     ]
-    case.spatial_graph_refs.append(payload)
-    case.spatial_graph_refs.sort(key=lambda item: str(item.get("graph_id", "")))
+    references.append(payload)
+    references.sort(key=lambda item: str(item.get("graph_id", "")))
+    case.metadata[SPATIAL_GRAPH_REFS_KEY] = references
     return case
